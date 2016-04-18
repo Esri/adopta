@@ -1,0 +1,150 @@
+/*------------------------- Styles for widget panel -----------------------*/
+.esriCTMainContainer
+{
+    min-width: 222px;
+    height: 100%;
+    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
+}
+
+.esriCTOverridePanelStyle
+{
+    padding: 14px 0 0 0 !important;
+}
+
+.jimu-widget-Adopta .esriCTFullHeight
+{
+    height: 100%;
+}
+.jimu-widget-Adopta .esriCTFullWidth
+{
+    width: 100%;
+}
+.jimu-widget-Adopta .esriCTEllipsis
+{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.jimu-widget-Adopta .esriCTCursorPointer
+{
+    cursor: pointer;
+}
+
+.jimu-widget-Adopta .esriCTHidden
+{
+    display: none;
+}
+.jimu-widget-Adopta .esriCTLoginDetailsContainer
+{
+    width: 100%;
+    max-height: calc(50% - 30px);
+    overflow-y: auto;
+    padding: 10px;
+}
+.jimu-widget-Adopta .esriCTLoginInfoContainer
+{
+    padding: 10px;
+    width: 100%;
+    height: calc(100% - 90px);
+    overflow-y: auto;
+}
+
+.jimu-widget-Adopta .esriCTAssetInfoSectionContent
+{
+    padding: 0 15px;
+}
+
+.jimu-widget-Adopta .esriCTMinimizeLoginInfoContainer
+{
+    height: calc(50% - 30px);
+}
+.jimu-widget-Adopta .esriCTLoginDetailsContainer .dijitTextBox
+{
+    margin: 0px 10px 15px 10px;
+    width: calc(100% - 20px);
+}
+
+.jimu-widget-Adopta .esriCTActionsContainer .dijitTextBox
+{
+    margin-bottom: 10px;
+    width: 100%;
+}
+.jimu-widget-Adopta .esriCTFullButton
+{
+    width: 100%;
+    height: 40px;
+    background-color: #00B050;
+    line-height: 40px;
+    text-align: center;
+    color: #FFF;
+}
+
+.jimu-widget-Adopta .esriCTWidgetErrorNode
+{
+    padding: 0px 14px;
+}
+
+.jimu-widget-Adopta .esriCTLoginStatusMsg
+{
+    padding: 10px;
+}
+
+.jimu-widget-Adopta .esriCTStreetAddressText
+{
+    padding-bottom: 5px;
+    border-bottom: 1px solid #333333;
+}
+
+.jimu-widget-Adopta .esriCTStreetAddressContent
+{
+    padding-top: 5px;
+}
+
+.jimu-widget-Adopta .esriCTAdoptButtonContainer
+{
+    color: #fff;
+}
+
+.jimu-widget-Adopta .esriCTAdoptButton
+{
+    float: right;
+}
+
+.jimu-widget-Adopta .esriCTActionsContainer
+{
+    padding-top: 20px;
+}
+
+.jimu-widget-Adopta .esriCTDisabledAdoptButton
+{
+    background-color: #808080;
+    cursor: default;
+}
+
+.jimu-widget-Adopta .esriCTPanelWithButton
+{
+    height: calc(100% - 40px);
+    overflow-y: auto;
+    padding-bottom: 10px;
+}
+
+.jimu-widget-Adopta .esriCTSelectAssetSection
+{
+    padding: 0 15px 10px 15px;
+}
+
+/*------------------------- End of styles for widget panel -----------------------*/
+
+/*------------------------- Overridden dojo Styles -----------------------*/
+/*Hide arrow node for team autocomplete box*/
+.jimu-widget-Adopta .esriTeamAutoCompleteContainer .dijitArrowButton.dijitDownArrowButton
+{
+    display: none;
+}
+
+.jimu-widget-Adopta .esriCTAssetInfoSectionContent .dijitContentPane
+{
+    padding: 0px !important;
+}
+

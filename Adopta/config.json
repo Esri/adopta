@@ -1,0 +1,76 @@
+{
+	"assetLayerDetails": {
+		"url": "http://services1.arcgis.com/DlnuvLGpDczjeSgG/arcgis/rest/services/FireHydrants/FeatureServer/0",
+		"geometryType": "point",
+		"id": "FireHydrants_5149"
+	},
+	"relatedTableDetails": {
+		"url": "http://services1.arcgis.com/DlnuvLGpDczjeSgG/arcgis/rest/services/FireHydrants/FeatureServer/1",
+		"relationShipId": 0,
+		"id": "FireHydrants_5344",
+		"title": "FireHydrants - User_table"
+	},
+	"gpServiceURL": "https://csslesxi16-vm17.cybertech.com/arcgis/rest/services/Adopta/AdoptaGPAuthentication/GPServer/Adopta_GP_Authentication",
+	"nickNameField": "Nickname",
+	"showReverseGeocodedAddress": true,
+	"highlightColor": "#00ffff",
+	"loginHelpText": "<div style='text-align: center;font-size:15px;'>Already have an account?</div><br><div style='text-align: left;'>Please enter your email address and click submit to login and start adopting assets.</div><br><div style='text-align: center;font-size:15px;'>First time here?</div><div style='text-align: center;'><ol><li style='text-align: justify;'><span style='text-align: left;'>Please enter your email address and click submit to signup</span></li><li style='text-align: justify;'><span style='text-align: left;'>An email will be sent with a link to activate your account</span></li><li style='text-align: justify;'><span style='text-align: left;'>Please click the link in your email to verify your email address</span></li><li style='text-align: justify;'><span style='text-align: left;'>Once your email is verified, you can proceed to login by entering your email address only.</span><span style='text-align: center;'>No password is required to login</span></li></ol></ol></div>",
+	"emailField": "Email",
+	"teamField": "Team",
+	"additionalFields": [{
+		"field": "Firstname",
+		"placeHolderText": "First Name",
+		"isRequired": true
+	}, {
+		"field": "Lastname",
+		"placeHolderText": "Last Name",
+		"isRequired": false
+	}],
+	"actions": {
+		"assign": {
+			"assignLabel": "Adopt Me",
+			"assignedLabel": "Adopted",
+			"urlParameterLabel": "assign",
+			"buttonColor": "#00FF00",
+			"fieldsToUpdate": [
+			{
+				"field": "Assetstatus",
+				"action": "SetValue",
+				"value": "Adopted"
+			}, {
+				"field": "Adopteddate",
+				"action": "SetDate"
+			}, {
+				"field": "Laststatusupdate",
+				"action": "SetDate"
+			}]
+		},
+		"unAssign": {
+			"name": "Abandon",
+			"urlParameterLabel": "unassign",
+			"displayInMyAssets": false,
+			"buttonColor": "#FF0000",
+			"fieldsToUpdate": [{
+				"field": "Assetstatus",
+				"action": "SetValue",
+				"value": "Needs Adoption"
+			}, {
+				"field": "Adopteddate",
+				"action": "Clear"
+			}, {
+				"field": "Laststatusupdate",
+				"action": "SetDate"
+			}]
+		},
+		"additionalActions": [{
+			"name": "Clean",
+			"urlParameterLabel": "clean",
+			"buttonColor": "#00FF00",
+			"displayInMyAssets": true,
+			"fieldsToUpdate": [{
+				"field": "Lastcleaneddate",
+				"action": "SetDate"
+			}]
+		}]
+	}
+}
