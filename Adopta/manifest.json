@@ -1,0 +1,25 @@
+{
+  "name": "Adopta",
+  "2D": true,
+  "3D": false,
+  "platform": "HTML",
+  "version": "2.0.1",
+  "wabVersion": "2.0.1",
+  "author": "Copyright 2015 Esri Inc.",
+  "description": "Adopta",
+  "copyright": "Copyright 2015 Esri Inc.",
+  "license": "http://links.esri.com/solutions/license",
+  "properties": {
+		"inPanel":true,
+		"hasLocale": true,
+		"hasStyle":true,
+		"hasConfig":true,
+		"hasUIFile":true,
+		"hasSettingPage":false,
+		"hasSettingUIFile":false,
+		"hasSettingLocale":false,
+		"hasSettingStyle":false,
+		"IsController":false,
+		"keepConfigAfterMapSwithched": false
+  }
+}
