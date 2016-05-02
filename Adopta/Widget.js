@@ -21,7 +21,8 @@ define([
   'esri/Color',
   'dojo/_base/array',
   'esri/tasks/Geoprocessor',
-  'jimu/utils'
+  'jimu/utils',
+  'esri/request'
 ],
 function (
   declare,
@@ -46,7 +47,8 @@ function (
   Color,
   array,
   Geoprocessor,
-  jimuUtils) {
+  jimuUtils,
+  esriRequest) {
   return declare([BaseWidget], {
     baseClass: 'jimu-widget-Adopta', //Widget base class name
     urlParamsToBeAdded: {}, //Parameters to be added in url which will be sent via email
@@ -74,6 +76,8 @@ function (
       this.config.userDetails = null;
       //Check for valid configuration
       if (this._isValidConfig) {
+        //Get theme color
+        this._getSelectedThemeColor();
         //if url is having userID then load login screen
         if (this.config.urlParams && !this.config.urlParams.userid) {
           this._prevOpenPanel = "login";
@@ -97,7 +101,7 @@ function (
         this._createAssetDetailsPanel();
         //Panel to show my assets
         this._createMyAssetsInstance();
-        on(this.myAssestsBtn, "click", lang.hitch(this, this._myAssestsBtnClicked));
+        on(this.loginInfoSectionPanel, "click", lang.hitch(this, this._myAssestsBtnClicked));
         //create & add graphics layer to highlight selected feature
         this._featureGraphicsLayer = new GraphicsLayer();
         this.map.addLayer(this._featureGraphicsLayer);
@@ -131,7 +135,7 @@ function (
       this._mapTooltipHandler.on("clicked", lang.hitch(this, function (evt) {
         if (this._assetDetails) {
           this._assetDetails.showAssetInfoPopup(evt.graphic);
-          this._highlightFeatureOnMap(evt.graphic);
+          this._highlightFeatureOnMap(evt.graphic, false);
         }
       }));
       // once widget is created call its startup method
@@ -143,6 +147,7 @@ function (
     * @memberOf widgets/Adopta/Widget
     */
     _createLoginInstance: function () {
+      var parameterLabel;
       // create an instance of login
       this._loginInstance = new Login({
         nls: this.nls,
@@ -153,18 +158,20 @@ function (
       this._loginInstance.on("showMessage", lang.hitch(this, this._showMessage));
       this._loginInstance.on("loggedIn", lang.hitch(this, function (userDetails) {
         this.config.userDetails = lang.clone(userDetails);
-        //check for url params
-        if (this.config.urlParams && this.config.urlParams.adoptId) {
-          this._assetDetails.fetchSelectedAsset(this.config.urlParams.adoptId);
-        }
         //set the logged in user email as innerHTML to my asset button
         domAttr.set(this.myAssestsBtn, "innerHTML",
           this.config.userDetails[this.config.emailField]);
-        this._myAssetsInstance.getMyAssets();
+        //Passing true value will perform actions from URL
+        this._myAssetsInstance.getMyAssets(true);
         //navigate to myAsset panel
         this._showPanel("myAsset");
         //once user is logged in the functionality to add assets will be enabled so update the tooltip
         this._mapTooltipHandler.updateTooltip();
+        parameterLabel = this.config.actions.assign.urlParameterLabel;
+        //check for url params has adoptId addopt the selected asset
+        if (this.config.urlParams && this.config.urlParams.hasOwnProperty(parameterLabel)) {
+          this._assetDetails.fetchSelectedAsset(this.config.urlParams[parameterLabel]);
+        }
       }));
       this._loginInstance.on("signedIn", lang.hitch(this, this._onSignedIn));
       this._loginInstance.on("invalidLogin", lang.hitch(this, function () {
@@ -218,8 +225,14 @@ function (
         loading: this._loading
       }, domConstruct.create("div", {}, this.assetInfoSection));
       //Listen for asset adopted event
-      on(this._assetDetails, "assetAdopted", lang.hitch(this, function () {
-        this._myAssetsInstance.getMyAssets();
+      on(this._assetDetails, "assetAdopted", lang.hitch(this, function (objectId) {
+        this._myAssetsInstance.setSelectedAsset(objectId);
+        //Passing false value will not perform actions from URL
+        this._myAssetsInstance.getMyAssets(false);
+      }));
+      //Listen for additional actions performed on selected asset and update my assets view
+      on(this._assetDetails, "actionPerformed", lang.hitch(this, function (actionName, objectId) {
+        this._myAssetsInstance.onActionPerformed(actionName, objectId);
       }));
       //Show asset details panel
       on(this._assetDetails, "showPanel", lang.hitch(this, function (currentNode) {
@@ -230,14 +243,12 @@ function (
         this._showMessage(message);
       }));
       //Add url params on adopting a asset
-      on(this._assetDetails, "adoptAsset", lang.hitch(this, function (paramString) {
-        for (var key in paramString) {
-          this.urlParamsToBeAdded[key] = paramString[key];
-        }
+      on(this._assetDetails, "adoptAsset", lang.hitch(this, function (objectId) {
+        this.urlParamsToBeAdded[this.config.actions.assign.urlParameterLabel] = objectId;
       }));
       //Highlight feature on map
       on(this._assetDetails, "highlightFeatureOnMap", lang.hitch(this, function (selectedFeature) {
-        this._highlightFeatureOnMap(selectedFeature);
+        this._highlightFeatureOnMap(selectedFeature, true);
       }));
     },
 
@@ -250,18 +261,45 @@ function (
       this._myAssetsInstance = new MyAssets({
         nls: this.nls,
         config: this.config,
-        layer: this._assetLayer
+        layer: this._assetLayer,
+        loading: this._loading
       }, domConstruct.create("div", {}, this.myAssetsSection));
       on(this._myAssetsInstance, "updateMyAssetCount", lang.hitch(this, function (count) {
         if (count > 0) {
           //set the logged in user email  and count of my assets as innerHTML to my asset button
           domAttr.set(this.myAssestsBtn, "innerHTML",
             this.config.userDetails[this.config.emailField] + " (" + count + ")");
+          //Show next button to navigate userto list of adopted assets
+          domClass.remove(this.myAssestsNextButton, "esriCTHidden");
         } else {
           //set only the logged in user email as innerHTML to my asset button
           domAttr.set(this.myAssestsBtn, "innerHTML",
             this.config.userDetails[this.config.emailField]);
+          //Hide next button since no assets are adopted by logged in user
+          domClass.add(this.myAssestsNextButton, "esriCTHidden");
         }
+      }));
+
+      on(this._myAssetsInstance, "performAction", lang.hitch(this,
+      function (action, selectedAsset, showAssetDetails) {
+        this._assetDetails.updateFieldsForAction(action, selectedAsset, showAssetDetails);
+        if (showAssetDetails) {
+          this._highlightFeatureOnMap(selectedAsset, true);
+        }
+      }));
+
+      on(this._myAssetsInstance, "showAssetDetails", lang.hitch(this,
+      function (selectedAsset, totalCount) {
+        //set the logged in user email  and count of my assets as innerHTML to my asset button
+        domAttr.set(this.myAssestsBtn, "innerHTML",
+            this.config.userDetails[this.config.emailField] + " (" + totalCount + ")");
+        this._assetDetails.showAssetInfoPopup(selectedAsset);
+        this._highlightFeatureOnMap(selectedAsset, true);
+      }));
+
+      //Highlight feature on map
+      on(this._myAssetsInstance, "highlightMyAsset", lang.hitch(this, function (selectedFeature) {
+        this._highlightFeatureOnMap(selectedFeature, false);
       }));
     },
 
@@ -273,10 +311,27 @@ function (
       if (lang.trim(domAttr.get(this.myAssestsBtn, "innerHTML")) === this.nls.loginSignUpLabel) {
         this._showPanel("login");
       } else {
-        //TODO: remove msg, and show panel
-        this._showMessage("MyAssest coming soon...");
-        this._myAssetsInstance.showMyAssets();
-        //this._showPanel("myAsset");
+        //If the selected asset was abonded, we need to clear the selected map graphics
+        //beacuse the asset will not be present on myassets list
+        if (!this._myAssetsInstance.getSelectedAsset()) {
+          this._clearGrahics();
+        }
+        if (this._myAssetsInstance && this._myAssetsInstance.myAssets.length > 0) {
+          if (domClass.contains(this._myAssetsInstance.selecetAssetSection, "esriCTHidden") &&
+            this._prevOpenPanel !== "assetDetails") {
+            this._myAssetsInstance.showSelectAsssetSection();
+            this._handleNavigationArrowVisibility(true, false);
+          }else {
+            //TODO: remove msg, and show panel
+            this._myAssetsInstance.showMyAssets();
+            this._showPanel("myAsset");
+            this._handleNavigationArrowVisibility(false, true);
+          }
+        } else {
+          this._myAssetsInstance.showSelectAsssetSection();
+          this._showPanel("myAsset");
+          this._handleNavigationArrowVisibility(false, false);
+        }
       }
     },
 
@@ -375,6 +430,7 @@ function (
           break;
         case "assetDetails":
           node = this.assetInfoSection;
+          this._handleNavigationArrowVisibility(false, true);
           break;
       }
       return node;
@@ -408,13 +464,35 @@ function (
     * highlight selected feature on map
     * @memberOf widgets/Adopta/Widget
     **/
-    _highlightFeatureOnMap: function (selectedFeature) {
-      var graphics;
+    _highlightFeatureOnMap: function (selectedFeature, isCenterAndZoom) {
+      var graphics, point, symbol;
       //highlight features on map only if layer is visible
       if (this._assetLayer.visible) {
         this._clearGrahics();
-        graphics = this._getPointSymbol(selectedFeature, this._assetLayer);
+        if (selectedFeature.symbol) {
+          symbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_SQUARE,
+          null, new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+          new Color(this.config.highlightColor), 3));
+          symbol.setColor(null);
+          symbol.size = 30; //set default Symbol size which will be used in case symbol not found.
+          point = new Point(selectedFeature.geometry.x, selectedFeature.geometry.y,
+            new SpatialReference({ wkid: selectedFeature.geometry.spatialReference.wkid })
+            );
+          symbol = this._updatePointSymbolProperties(symbol, selectedFeature.symbol);
+          graphics = new Graphic(point, symbol, selectedFeature.attributes);
+        } else {
+          graphics = this._getPointSymbol(selectedFeature, this._assetLayer);
+        }
         this._featureGraphicsLayer.add(graphics);
+      }
+
+      if (this._myAssetsInstance) {
+        this._myAssetsInstance.highlightItem(
+        selectedFeature.attributes[this._assetLayer.objectIdField]);
+      }
+      //If asset is selected through my asset list panel, bring the selected feature to the center of map
+      if (isCenterAndZoom) {
+        this.map.centerAt(point);
       }
     },
 
@@ -562,6 +640,73 @@ function (
         domAttr.set(this.loginStatusMessage, "innerHTML", this.nls.gpServiceSuccessMsg);
       }
       domClass.remove(this.loginStatusMessage, "esriCTHidden");
+    },
+
+    /**
+    * Function is used show/hide navigation arrows
+    * @param{boolean} visibilty of next arrow
+    * @param{boolean} visibilty of previous arrow
+    * @memberOf widgets/Adopta/Widget
+    */
+    _handleNavigationArrowVisibility: function (isNextArrowRequired, isPrevArrowRequired) {
+      if (isNextArrowRequired) {
+        domClass.remove(this.myAssestsNextButton, "esriCTHidden");
+      } else {
+        domClass.add(this.myAssestsNextButton, "esriCTHidden");
+      }
+      if (isPrevArrowRequired) {
+        domClass.remove(this.myAssestsPrevButton, "esriCTHidden");
+      } else {
+        domClass.add(this.myAssestsPrevButton, "esriCTHidden");
+      }
+
+    },
+
+    /* Get selected Theme Color*/
+
+    /**
+    * Function is used to get the configured theme color
+    * @memberOf widgets/Adopta/Widget
+    */
+    _getSelectedThemeColor: function () {
+      var requestArgs, styleName, selectedTheme;
+      //Get selected theme Name
+      selectedTheme = this.appConfig.theme.name;
+      //get selected theme's style
+      if (this.appConfig && this.appConfig.theme && this.appConfig.theme.styles) {
+        styleName = this.appConfig.theme.styles[0];
+      } else {
+        styleName = "default";
+      }
+      //cerate request to get the selected theme's manifest to fetch the color
+      requestArgs = {
+        url: "./themes/" + selectedTheme + "/manifest.json",
+        content: {
+          f: "json"
+        },
+        handleAs: "json",
+        callbackParamName: "callback"
+      };
+      esriRequest(requestArgs).then(lang.hitch(this, function (response) {
+        var i, styleObj;
+        //match the selected style name and get its color
+        if (response && response.styles && response.styles.length > 0) {
+          for (i = 0; i < response.styles.length; i++) {
+            styleObj = response.styles[i];
+            if (styleObj.name === styleName) {
+              this.config.selectedThemeColor = styleObj.styleColor;
+              break;
+            }
+          }
+        }
+        //if selectedThemeColor is not set then by default use black
+        if (!this.config.selectedThemeColor) {
+          this.config.selectedThemeColor = "#000000";
+        }
+      }), lang.hitch(this, function () {
+        this.config.selectedThemeColor = "#000000";
+      }));
     }
+    /*End get selected theme color*/
   });
 });

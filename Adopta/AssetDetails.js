@@ -14,7 +14,8 @@
   'esri/tasks/locator',
   'esri/geometry/webMercatorUtils',
   'esri/tasks/query',
-  'dojo/Evented'
+  'dojo/Evented',
+  'dojo/string'
 ], function (
   declare,
   array,
@@ -31,7 +32,8 @@
   Locator,
   webMercatorUtils,
   Query,
-  Evented
+  Evented,
+  string
 ) {
   return declare([BaseWidget, _WidgetsInTemplateMixin, Evented], {
 
@@ -73,7 +75,7 @@
         this._locatorInstance.locationToAddress(webMercatorUtils.webMercatorToGeographic(
         selectedFeature.geometry), 100);
       }
-      assetStatus = this._checkAssetAdoptionStatus();
+      assetStatus = this._checkAssetAdoptionStatus(this.selectedFeature);
       this._createAdoptActionContainer(assetStatus);
     },
 
@@ -81,9 +83,9 @@
     * Check whether the asset is already adopted or not
     * @memberOf widgets/Adopta/AssetDetails
     */
-    _checkAssetAdoptionStatus: function () {
+    _checkAssetAdoptionStatus: function (selectedFeature) {
       var relatedGUID, isAssetAdopted = false, isAssetAdoptedByLoggedInUser = false;
-      relatedGUID = this.selectedFeature.attributes[this.map._layers[
+      relatedGUID = selectedFeature.attributes[this.map._layers[
         this.config.assetLayerDetails.id].relationships[0].keyField];
       if (relatedGUID && relatedGUID !== null && lang.trim(relatedGUID) !== "") {
         isAssetAdopted = true;
@@ -108,7 +110,9 @@
       domConstruct.empty(this.adoptActionContainer);
       //Hide textbox if asset is already adopted by other user
       if (!assetStatus.isAssetAdopted || assetStatus.isAssetAdoptedByLoggedInUser) {
-        nicknameContainer = domConstruct.create("div", {}, this.adoptActionContainer);
+        nicknameContainer = domConstruct.create("div", {
+          "class": "esriCTFullWidth"
+        }, this.adoptActionContainer);
         //TODO : create actions container
         this.nickNameInputTextBox = new TextBox({
           placeHolder: this.nls.nameAssetTextBoxPlaceholder
@@ -122,19 +126,28 @@
         "class": "esriCTAdoptButton esriCTEllipsis jimu-btn"
       }, adoptBtnContainer);
       this._setAdoptButtonState(assetStatus, adoptBtn);
+      //If actions container is already created remove it from the node
+      domConstruct.empty(this.additionalActionContainer);
+      if (assetStatus.isAssetAdoptedByLoggedInUser) {
+        this._createActionButtons();
+      }
       on(adoptBtn, "click", lang.hitch(this, function () {
         if (!domClass.contains(adoptBtn, "jimu-state-disabled")) {
-          var isNewAssetAdopted = false;
           //Check if user is logged in and accordingly perform the actions
           if (this.config.userDetails) {
-            if (domAttr.get(adoptBtn, "innerHTML") === this.config.actions.assign.assignLabel) {
-              isNewAssetAdopted = true;
+            //Check if nick name field is empty
+            if (this.nickNameInputTextBox) {
+              this.selectedFeature.attributes[this.config.nickNameField] = this.nickNameInputTextBox
+                .getValue();
             }
-            this._adoptAsset(isNewAssetAdopted);
+            if (domAttr.get(adoptBtn, "innerHTML") === this.config.actions.assign.assignLabel) {
+              this._adoptAsset(this.selectedFeature);
+            } else {
+              //as we are updateing only the nick name field send action as null
+              this._updateFeatureDetails(this.selectedFeature, null, true);
+            }
           } else {
-            this.emit("adoptAsset", {
-              "adoptId": this.selectedFeature.attributes[this.layer.objectIdField]
-            });
+            this.emit("adoptAsset", this.selectedFeature.attributes[this.layer.objectIdField]);
             this.showPanel("login");
           }
         }
@@ -164,6 +177,7 @@
         }
       }
       domAttr.set(adoptBtn, "innerHTML", buttonText);
+      domAttr.set(adoptBtn, "title", buttonText);
     },
 
     /**
@@ -219,79 +233,133 @@
     },
 
     /**
-    * Function to adopt an selected asset
-    * @param {boolean} Flag to check if selected is adopted/updated
+    * Get selected asset's title
+    * @param {object} current selected feature
     * @memberOf widgets/Adopta/AssetDetails
     */
-    _adoptAsset: function (isNewAssetAdopted) {
+    _getAssetTitle: function (selectedFeature) {
       var adoptedAssetString;
-      this.loading.show();
-      //Check if nick name field is empty
-      if (lang.trim(this.nickNameInputTextBox.getValue()) !== "") {
-        this.selectedFeature.attributes[this.config.nickNameField] = this.nickNameInputTextBox
-         .getValue();
-      }
-
-      if (lang.trim(this.selectedFeature.getTitle()) !== "") {
-        adoptedAssetString = lang.trim(this.selectedFeature.getTitle());
-      } else if (this.selectedFeature.attributes[this.layer.displayField]){
-          adoptedAssetString = this.selectedFeature.attributes[this.layer.displayField];
+      if (lang.trim(selectedFeature.getTitle()) !== "") {
+        adoptedAssetString = lang.trim(selectedFeature.getTitle());
+      } else if (selectedFeature.attributes[this.layer.displayField]) {
+        adoptedAssetString = selectedFeature.attributes[this.layer.displayField];
       } else {
         adoptedAssetString = "";
       }
-      this._updateFieldsForAdoption();
+      return adoptedAssetString;
+    },
+
+    /**
+    * Function to adopt an selected asset
+    * @param {object} current selected feature
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    _adoptAsset: function (selectedFeature) {
       //Add users guid into asset to identify which asset belongs to user
-      this.selectedFeature.attributes[this.config.assetLayerDetails.keyField] = this.config
+      selectedFeature.attributes[this.config.assetLayerDetails.keyField] = this.config
         .userDetails[this.config.relatedTableDetails.keyField];
-      this.layer.applyEdits(null, [this.selectedFeature], null, lang.hitch(this,
+      this.updateFieldsForAction(this.config.actions.assign.name, selectedFeature, true);
+    },
+
+    /**
+    * Update selected asset details
+    * @param {object} current selected feature
+    * @param {string} current action
+    * @param {boolean} flag to decide the visibility of details panel
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    _updateFeatureDetails: function (selectedFeature, actionName, showAssetDetails) {
+      var isNewAssetAdopted,adoptionCompleteMsg;
+      //if action is adoopted it means new asset is addopted
+      if(actionName === this.config.actions.assign.name){
+        isNewAssetAdopted = true;
+      } else {
+        isNewAssetAdopted = false;
+      }
+      this.loading.show();
+      adoptionCompleteMsg = string.substitute(this.nls.adoptionCompleteMsg, {
+        'assetTitle': this._getAssetTitle(selectedFeature)
+      });
+      this.layer.applyEdits(null, [selectedFeature], null, lang.hitch(this,
         function (added, updated, deleted) {
-        /*jshint unused: false*/
-        if (updated[0].success) {
-          //Refresh layer and show the updated information in asset details panel
-          this.layer.refresh();
-          this.showAssetInfoPopup(this.selectedFeature);
-          if (isNewAssetAdopted) {
-            this.emit("showMessage", this.nls.adoptionCompleteMsg + " " + adoptedAssetString);
-            //If asset is adopted, increment the count of total number of adopted asset by logged in user
-            this.emit("assetAdopted");
+          /*jshint unused: false*/
+          if (updated[0].success) {
+            //Refresh layer and show the updated information in asset details panel
+            this.layer.refresh();
+            if (showAssetDetails) {
+              this.showAssetInfoPopup(selectedFeature);
+            }
+            if (isNewAssetAdopted) {
+              this.emit("showMessage", adoptionCompleteMsg);
+              //If asset is adopted, increment the count of total number of adopted asset by logged in user
+              this.emit("assetAdopted", selectedFeature.attributes[this.layer.objectIdField]);
+            } else {
+              this.emit("actionPerformed", actionName,
+                selectedFeature.attributes[this.layer.objectIdField]);
+              if (actionName === this.config.actions.unAssign.name) {
+                this.emit("showMessage", string.substitute(this.nls.abandonCompleteMsg,
+                  { assetTitle: this._getAssetTitle(selectedFeature), actionName: actionName }));
+              }
+            }
+          } else {
+            //Show error if adoption fails
+            this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
           }
-        } else {
+          this.loading.hide();
+        }), lang.hitch(this, function () {
           //Show error if adoption fails
           this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
-        }
-        this.loading.hide();
-      }), lang.hitch(this, function () {
-        //Show error if adoption fails
-        this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
-        this.loading.hide();
-      }));
+          this.loading.hide();
+        }));
     },
 
     /**
     * Function to update the fields specified in actions
+    * @param {string} current action
+    * @param {object} current selected feature
+    * @param {boolean} flag to decide the visibility of details panel
     * @memberOf widgets/Adopta/AssetDetails
     */
-    _updateFieldsForAdoption: function () {
-      array.forEach(this.config.actions.assign.fieldsToUpdate, lang.hitch(this,
+    updateFieldsForAction: function (actionName, selectedFeature, showAssetDetails) {
+      var fieldsToUpdate;
+      //check if action is unAssign choose its fields to update
+      if (actionName === this.config.actions.unAssign.name) {
+        selectedFeature.attributes[this.config.assetLayerDetails.keyField] = null;
+        fieldsToUpdate = this.config.actions.unAssign.fieldsToUpdate;
+      } else if (actionName === this.config.actions.assign.name) {
+        //check if action is assign choose its fields to update and set adopt action flag
+        fieldsToUpdate = this.config.actions.assign.fieldsToUpdate;
+      }
+      else {
+        array.some(this.config.actions.additionalActions, lang.hitch(this,
+          function (currentAction) {
+            if (actionName === currentAction.name) {
+              fieldsToUpdate = currentAction.fieldsToUpdate;
+              return true;
+            }
+          }));
+      }
+      //set values in attributes as in configured action
+      array.forEach(fieldsToUpdate, lang.hitch(this,
         function (currentAction) {
-        switch (currentAction.action) {
+          switch (currentAction.action) {
           case "SetValue":
-            this.selectedFeature.attributes[currentAction.field] = currentAction.value;
+            selectedFeature.attributes[currentAction.field] = currentAction.value;
             break;
           case "SetDate":
-            this.selectedFeature.attributes[currentAction.field] = Date.now();
+            selectedFeature.attributes[currentAction.field] = Date.now();
             break;
           case "Clear":
-            this.selectedFeature.attributes[currentAction.field] = null;
+            selectedFeature.attributes[currentAction.field] = null;
             break;
-        }
-      }));
+          }
+        }));
+      this._updateFeatureDetails(selectedFeature, actionName, showAssetDetails);
     },
 
     /**
     * Function to fetch selected asset through URL parameter
     * @param {string} selected asset id
-    * @param {string} value to be inserted in nick name field
     * @memberOf widgets/Adopta/AssetDetails
     */
     fetchSelectedAsset: function (assetId) {
@@ -303,15 +371,67 @@
       // Query for the features with the logged in UserId
       this.layer.queryFeatures(queryField, lang.hitch(this, function (
           response) {
+        var assetAlreadyAdoptedMsg;
         if (response && response.features[0]) {
+          //check if asset is already adopted
+          if (this._checkAssetAdoptionStatus(response.features[0]).isAssetAdopted) {
+            assetAlreadyAdoptedMsg = string.substitute(this.nls.assetAlreadyAdoptedMsg, {
+              'assetTitle': this._getAssetTitle(response.features[0])
+            });
+            this.emit("showMessage", assetAlreadyAdoptedMsg);
+          } else {
+            this._adoptAsset(response.features[0]);
+          }
           this.showAssetInfoPopup(response.features[0]);
-          this._adoptAsset(true);
           this.emit("highlightFeatureOnMap", this.selectedFeature);
         } else {
           //Show error if adoption fails
           this.emit("showMessage", this.nls.assetNotFoundMsg);
         }
       }));
+    },
+
+    /**
+    * Function to create action button for selected assets based on configuration
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    _createActionButtons: function () {
+      var additionalActionsContainer;
+      domConstruct.empty(this.additionalActionContainer);
+      additionalActionsContainer = domConstruct.create("div", {}, this.additionalActionContainer);
+      array.forEach(this.config.actions.additionalActions, lang.hitch(this,
+        function (currentAction) {
+          this._createBtn(currentAction, additionalActionsContainer);
+        }));
+      this._createBtn(this.config.actions.unAssign, additionalActionsContainer);
+    },
+
+    /**
+    * Create action button
+    * @param {string} current action
+    * @param {string} parent node for action button
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    _createBtn: function (currentAction, parentNode) {
+      var actionBtn;
+      actionBtn = domConstruct.create("div", {
+        "class": "esriCTEllipsis jimu-btn esriCTStaticWidth",
+        "innerHTML": currentAction.name,
+        "title": currentAction.name
+      }, parentNode);
+      domAttr.set(actionBtn, "actionLabel", currentAction.name);
+      on(actionBtn, "click", lang.hitch(this, function (evt) {
+        this._fetchFieldsToBeUpdated(domAttr.get(evt.currentTarget, "actionLabel"));
+      }));
+    },
+
+    /**
+    * Obtained fields to be updated for particular action
+    * @param {string} current action
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    _fetchFieldsToBeUpdated: function (actionName) {
+      this.updateFieldsForAction(actionName, this.selectedFeature, true);
     }
   });
 });
