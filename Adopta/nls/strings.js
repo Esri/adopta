@@ -19,9 +19,11 @@ define({
     "invalidFields": "Please make sure all the fields contain valid values and required fields are not empty.", //Shown as error message when all the required fields from additional fields are not entered
     "unableToAdoptAssetMsg": "Unable to adopt asset, please try again later.", //Shown as message if any error occurs while adopting an asset
     "nickNameUpdateButtonLabel": "Update", //Shown as label for nickName update button
-    "adoptionCompleteMsg": "Thank you for adopting", //Shown as message in popup after asset is adopted
+    "adoptionCompleteMsg": "Thank you for adopting ${assetTitle}", //Shown as message in popup after asset is adopted
+    "abandonCompleteMsg": "${assetTitle} successfully ${actionName}", //Shown as message in popup after asset is abondend
     "invalidAppLinkMsg": "Invalid Application link.", //Shown as message in popup if the invalid url parameters are passed
-    "assetNotFoundMsg": "Asset not found." //Shown as message in popup if the invalid url parameters are passed for adopting asset
+    "assetNotFoundMsg": "Asset not found.", //Shown as message in popup if the invalid url parameters are passed for adopting asset
+    "assetAlreadyAdoptedMsg": "Asset ${assetTitle} is already adopted." //Shown as message in popup if the user is trying to adopt already adopted asset using url params
   }),
   "fr": 1
 });
