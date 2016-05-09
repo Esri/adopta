@@ -15,6 +15,7 @@
   'esri/geometry/webMercatorUtils',
   'esri/tasks/query',
   'dojo/Evented',
+  'dojo/Deferred',
   'dojo/string'
 ], function (
   declare,
@@ -33,6 +34,7 @@
   webMercatorUtils,
   Query,
   Evented,
+  Deferred,
   string
 ) {
   return declare([BaseWidget, _WidgetsInTemplateMixin, Evented], {
@@ -363,7 +365,7 @@
     * @memberOf widgets/Adopta/AssetDetails
     */
     fetchSelectedAsset: function (assetId) {
-      var queryField;
+      var queryField, def = new Deferred();
       queryField = new Query();
       queryField.where = this.layer.objectIdField + " = " + assetId;
       queryField.returnGeometry = true;
@@ -371,24 +373,36 @@
       // Query for the features with the logged in UserId
       this.layer.queryFeatures(queryField, lang.hitch(this, function (
           response) {
-        var assetAlreadyAdoptedMsg;
-        if (response && response.features[0]) {
-          //check if asset is already adopted
-          if (this._checkAssetAdoptionStatus(response.features[0]).isAssetAdopted) {
-            assetAlreadyAdoptedMsg = string.substitute(this.nls.assetAlreadyAdoptedMsg, {
-              'assetTitle': this._getAssetTitle(response.features[0])
-            });
-            this.emit("showMessage", assetAlreadyAdoptedMsg);
-          } else {
-            this._adoptAsset(response.features[0]);
-          }
-          this.showAssetInfoPopup(response.features[0]);
-          this.emit("highlightFeatureOnMap", this.selectedFeature);
+        def.resolve(response);
+      }), function () {
+        def.reject([]);
+      });
+      return def.promise;
+    },
+
+    /**
+    * Function to fetch selected asset details
+    * @param {string} selected asset id
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    getSelectedAssetDetails: function (response) {
+      var assetAlreadyAdoptedMsg;
+      if (response && response.features[0]) {
+        //check if asset is already adopted
+        if (this._checkAssetAdoptionStatus(response.features[0]).isAssetAdopted) {
+          assetAlreadyAdoptedMsg = string.substitute(this.nls.assetAlreadyAdoptedMsg, {
+            'assetTitle': this._getAssetTitle(response.features[0])
+          });
+          this.emit("showMessage", assetAlreadyAdoptedMsg);
         } else {
-          //Show error if adoption fails
-          this.emit("showMessage", this.nls.assetNotFoundMsg);
+          this._adoptAsset(response.features[0]);
         }
-      }));
+        this.showAssetInfoPopup(response.features[0]);
+        this.emit("highlightFeatureOnMap", this.selectedFeature);
+      } else {
+        //Show error if adoption fails
+        this.emit("showMessage", this.nls.assetNotFoundMsg);
+      }
     },
 
     /**

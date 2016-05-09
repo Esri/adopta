@@ -23,7 +23,11 @@ define({
     "abandonCompleteMsg": "${assetTitle} successfully ${actionName}", //Shown as message in popup after asset is abondend
     "invalidAppLinkMsg": "Invalid Application link.", //Shown as message in popup if the invalid url parameters are passed
     "assetNotFoundMsg": "Asset not found.", //Shown as message in popup if the invalid url parameters are passed for adopting asset
-    "assetAlreadyAdoptedMsg": "Asset ${assetTitle} is already adopted." //Shown as message in popup if the user is trying to adopt already adopted asset using url params
+    "assetAlreadyAdoptedMsg": "Asset ${assetTitle} is already adopted.", //Shown as message in popup if the user is trying to adopt already adopted asset using url params
+    "addAssetConfirmationMsg": "Newly created Asset will be directly adopted. Do you want add new asset here?", //Shown as confirmation message in popup while adding new asset
+    "yesButtonLabel": "Yes", //Shown as label for yes button in confirmation box
+    "noButtonLabel": "No", //Shown as label for no button in confirmation box
+    "unableToAddNewAssetMsg": "Unable to add new asset" //Shown as error message in popup when unable to add asset in layer
   }),
   "fr": 1
 });

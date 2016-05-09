@@ -4,14 +4,16 @@
   'dojo/Evented',
   'dojo/dom-style',
   'dojo/dom-construct',
-  'dojo/on'
+  'dojo/on',
+  "dojo/_base/event"
 ], function (
   declare,
   lang,
   Evented,
   domStyle,
   domConstruct,
-  on
+  on,
+  event
 ) {
   return declare([Evented], {
     baseClass: 'jimu-widget-Adopta-MapTooltipHandler',
@@ -36,6 +38,9 @@
     connectEventHandler: function () {
       this._disableWebMapPopup();
       this._mapClickHandler = on(this.handleClickFor, "click", lang.hitch(this, function (evt) {
+        //stop the event propagation
+        //if user clicks on a feature map click event should not be fired for adding new asset
+        event.stop(evt);
         this._clicked(evt);
       }));
       //handle mouse move on map to show tooltip only on non-touch devices

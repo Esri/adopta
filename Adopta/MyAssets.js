@@ -13,6 +13,7 @@
   'dojo/dom-attr',
   'dojo/on',
   'dojo/query',
+  'dojo/Deferred',
   'esri/symbols/jsonUtils'
 ], function (
   declare,
@@ -29,6 +30,7 @@
   domAttr,
   on,
   query,
+  Deferred,
   symbolJsonUtils
 ) {
   return declare([BaseWidget, _WidgetsInTemplateMixin, Evented], {
@@ -382,6 +384,27 @@
           }
         }));
       }
+    },
+
+    getMyAssetsList: function () {
+      var queryField, deferred = new Deferred();
+      queryField = new Query();
+      queryField.where = this.config.assetLayerDetails.keyField + " = '" +
+        this.config.userDetails[this.config.relatedTableDetails.keyField] + "'";
+      queryField.returnGeometry = true;
+      queryField.outFields = ["*"];
+      // Query for the features with the loggedin UserID
+      this.layer.queryFeatures(queryField, lang.hitch(this, function (
+          response) {
+        if (response && response.features) {
+          deferred.resolve(response.features);
+        } else {
+          deferred.reject([]);
+        }
+      }), function () {
+        deferred.reject([]);
+      });
+      return deferred;
     }
   });
 });

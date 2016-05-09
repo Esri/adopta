@@ -132,7 +132,7 @@
           if (usingUserID) {
             this.loggedIn(this.userDetails);
           } else {
-            this.signUpSuccessfull(this.userDetails);
+            this.signUpSuccessfull(this.userDetails, true);
           }
         } else {
           if (!usingUserID) {
@@ -271,7 +271,7 @@
         this.loading.hide();
         if (response.features && response.features.length > 0) {
           this.userDetails = lang.clone(response.features[0].attributes);
-          this.signUpSuccessfull(this.userDetails);
+          this.signUpSuccessfull(this.userDetails, false);
         }
       }));
     },
@@ -329,8 +329,8 @@
       this.emit("loggedIn", userDetails);
     },
 
-    signUpSuccessfull: function (userDetails) {
-      this.emit("signedIn", userDetails);
+    signUpSuccessfull: function (userDetails, isAlreadySignedIn) {
+      this.emit("signedIn", userDetails, isAlreadySignedIn);
     }
 
   });
