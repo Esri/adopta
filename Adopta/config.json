@@ -1,16 +1,16 @@
 {
 	"assetLayerDetails": {
-		"url": "http://services1.arcgis.com/DlnuvLGpDczjeSgG/arcgis/rest/services/CatchBasin/FeatureServer/0",
+		"url": "http://services1.arcgis.com/DlnuvLGpDczjeSgG/arcgis/rest/services/CatchBasins_symbology/FeatureServer/0",
 		"geometryType": "point",
-		"id": "CatchBasin_2874"
+		"id": "CatchBasins_symbology_8691"
 	},
 	"relatedTableDetails": {
-		"url": "http://services1.arcgis.com/DlnuvLGpDczjeSgG/arcgis/rest/services/CatchBasin/FeatureServer/1",
+		"url": "http://services1.arcgis.com/DlnuvLGpDczjeSgG/arcgis/rest/services/CatchBasins_symbology/FeatureServer/1",
 		"relationShipId": 0,
-		"id": "CatchBasin_7516",
-		"title": "CatchBasin - User_table"
+		"id": "CatchBasins_symbology_6731",
+		"title": "CatchBasins_symbology - User_table"
 	},
-	"gpServiceURL": "http://csslesxi16-vm17.cybertech.com/arcgis/rest/services/Adopta/AdoptaGPAuthentication/GPServer/Adopta_GP_Authentication",
+	"gpServiceURL": "http://csslesxi16-vm17.cybertech.com/arcgis/rest/services/Adopta/AdoptaGPAuthV2/GPServer/AdoptaGPAuth",
 	"nickNameField": "Nickname",
 	"showReverseGeocodedAddress": true,
 	"highlightColor": "#00ffff",
@@ -54,7 +54,7 @@
 			"fieldsToUpdate": [{
 				"field": "Assetstatus",
 				"action": "SetValue",
-				"value": "Needs Adoption"
+				"value": "Available"
 			}, {
 				"field": "Adopteddate",
 				"action": "Clear"
@@ -84,5 +84,18 @@
       "contentType": "image/png",
       "width": 22.5,
       "height": 22.5
-    }
+    },
+	"noAssetsFoundsMsg":"No Assets Adopted Yet.",
+	"toleranceSettings": {
+		"distance": 10,
+		"distanceUnits": 9001,
+		"distanceSettings": {
+			"miles": 9035,
+			"kilometers": 9036,
+			"feet": 9002,
+			"meters": 9001,
+			"yards": 9037,
+			"nauticalMiles": 9030
+		}
+	}
 }

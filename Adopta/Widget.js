@@ -22,7 +22,9 @@ define([
   'dojo/_base/array',
   'esri/tasks/Geoprocessor',
   'jimu/utils',
-  'esri/request'
+  'esri/request',
+  'esri/tasks/query',
+  'esri/geometry/geometryEngine'
 ],
 function (
   declare,
@@ -48,7 +50,9 @@ function (
   array,
   Geoprocessor,
   jimuUtils,
-  esriRequest) {
+  esriRequest,
+  Query,
+  geometryEngine) {
   return declare([BaseWidget], {
     baseClass: 'jimu-widget-Adopta', //Widget base class name
     urlParamsToBeAdded: {}, //Parameters to be added in url which will be sent via email
@@ -60,6 +64,7 @@ function (
     _loading: null, //Loading indicator instance
     _featureGraphicsLayer: null, //Graphics layer to add highlight the features
     _showtooltip: true, //Flag to indicate whether to show the map tooltip or not
+    _confirmationBox: null, //Holds object of confirmation box
 
     postCreate: function () {
       this.inherited(arguments);
@@ -170,8 +175,13 @@ function (
         parameterLabel = this.config.actions.assign.urlParameterLabel;
         //check for url params has adoptId addopt the selected asset
         if (this.config.urlParams && this.config.urlParams.hasOwnProperty(parameterLabel)) {
-          this._assetDetails.fetchSelectedAsset(this.config.urlParams[parameterLabel]);
+          this._assetDetails.fetchSelectedAsset(this.config.urlParams[parameterLabel]).then(
+            lang.hitch(this, function (response) {
+            this._assetDetails.getSelectedAssetDetails(response);
+          }));
         }
+        //handle map click handler as once user is logged in he can add assets
+        on(this.map, "click", lang.hitch(this, this._onMapClicked));
       }));
       this._loginInstance.on("signedIn", lang.hitch(this, this._onSignedIn));
       this._loginInstance.on("invalidLogin", lang.hitch(this, function () {
@@ -181,19 +191,91 @@ function (
     },
 
     /**
+    * Add new asset on map click if no asset is found in confgured buffer distance
+    * @params {evt} Map clicked event
+    * @memberOf widgets/Adopta/Widget
+    */
+    _onMapClicked: function (evt) {
+      var bufferedGeometries, query;
+      query = new Query();
+      bufferedGeometries = geometryEngine.geodesicBuffer([evt.mapPoint],
+        [this.config.toleranceSettings.distance],
+        this.config.toleranceSettings.distanceUnits,
+        true);
+      query.geometry = bufferedGeometries[0];
+      this._assetLayer.queryIds(query, lang.hitch(this, function (features) {
+        //on map click create asset only if any other asset does not exist in near by area
+        if (features.length === 0) {
+          this._confirmationBox = new Message({
+            message: this.nls.addAssetConfirmationMsg,
+            type: "question",
+            buttons: [{
+              "label": this.nls.yesButtonLabel, "onClick": lang.hitch(this, function () {
+                this._loading.show();
+                this._addNewFeature(evt.mapPoint);
+              })
+            }, { "label": this.nls.noButtonLabel }]
+          });
+        }
+      }));
+    },
+
+    /**
+    * Add new asset in the layer at the selected location
+    * @params {Object} mapPoint
+    * @memberOf widgets/Adopta/Widget
+    */
+    _addNewFeature: function (mapPoint) {
+      var newAssetGraphic;
+      this._confirmationBox.close();
+      newAssetGraphic = new Graphic();
+      newAssetGraphic.attributes = {};
+      newAssetGraphic.geometry = lang.clone(mapPoint);
+      // Add feature to the layer
+      this._assetLayer.applyEdits([newAssetGraphic], null, null,
+        lang.hitch(this, function (addResults) {
+          this._loading.hide();
+          //once new asset is added to the layer adopt it.
+          if (addResults[0].success) {
+            this._assetDetails.fetchSelectedAsset(addResults[0].objectId).then(lang.hitch(this,
+              function (response) {
+              this._assetDetails.getSelectedAssetDetails(response);
+            }));
+          } else {
+            this._showMessage(this.nls.unableToAddNewAssetMsg);
+          }
+        }), lang.hitch(this, function () {
+          this._loading.hide();
+          this._showMessage(this.nls.unableToAddNewAssetMsg);
+        }));
+    },
+
+    /**
     * Listen for sign in event and perform necessary actions
     * @params {Object} userDetails containing user info
     * @memberOf widgets/Adopta/Widget
     */
-    _onSignedIn: function (userDetails) {
-      var appURL = window.location.href;
+    _onSignedIn: function (userDetails, isAlreadySignedIn) {
+      var appURL = window.location.href, actionTable = null;
+      this.config.userDetails = lang.clone(userDetails);
       this.urlParamsToBeAdded.userid = userDetails[this.config.relatedTableDetails.keyField];
       for (var key in this.urlParamsToBeAdded) {
         appURL = this._addUrlParams(appURL, key, this.urlParamsToBeAdded[key]);
       }
       //TODO: check an alternative to load app in builder mode and support the mode parameter
       appURL = jimuUtils.url.removeQueryParamFromUrl(appURL, "mode");
-      this._executeGPTask(appURL, userDetails[this.config.emailField]);
+      if (isAlreadySignedIn) {
+        this._myAssetsInstance.getMyAssetsList().then(lang.hitch(this, function (objectIdsArray) {
+          if (objectIdsArray.length > 0) {
+            actionTable = this._constructActionURL(objectIdsArray);
+          } else {
+            actionTable = this.config.noAssetsFoundsMsg;
+          }
+          this._executeGPTask(appURL, userDetails[this.config.emailField], "login", actionTable);
+        }));
+      } else {
+        this._executeGPTask(appURL, userDetails[this.config.emailField], "signup", null);
+      }
       //Dont show the tooltip once user is logged in
       this._showtooltip = false;
       this._mapTooltipHandler.disconnectEventHandler();
@@ -266,9 +348,14 @@ function (
       }, domConstruct.create("div", {}, this.myAssetsSection));
       on(this._myAssetsInstance, "updateMyAssetCount", lang.hitch(this, function (count) {
         if (count > 0) {
-          //set the logged in user email  and count of my assets as innerHTML to my asset button
-          domAttr.set(this.myAssestsBtn, "innerHTML",
-            this.config.userDetails[this.config.emailField] + " (" + count + ")");
+          if (window.isRTL) {
+            domAttr.set(this.myAssestsBtn, "innerHTML", " (" + count + ")" +
+              this.config.userDetails[this.config.emailField]);
+          }
+          else {
+            domAttr.set(this.myAssestsBtn, "innerHTML",
+              this.config.userDetails[this.config.emailField] + " (" + count + ")");
+          }
           //Show next button to navigate userto list of adopted assets
           domClass.remove(this.myAssestsNextButton, "esriCTHidden");
         } else {
@@ -291,8 +378,13 @@ function (
       on(this._myAssetsInstance, "showAssetDetails", lang.hitch(this,
       function (selectedAsset, totalCount) {
         //set the logged in user email  and count of my assets as innerHTML to my asset button
-        domAttr.set(this.myAssestsBtn, "innerHTML",
-            this.config.userDetails[this.config.emailField] + " (" + totalCount + ")");
+        if (window.isRTL) {
+          domAttr.set(this.myAssestsBtn, "innerHTML", " (" + totalCount + ")" +
+          this.config.userDetails[this.config.emailField]);
+        } else {
+          domAttr.set(this.myAssestsBtn, "innerHTML",
+              this.config.userDetails[this.config.emailField] + " (" + totalCount + ")");
+        }
         this._assetDetails.showAssetInfoPopup(selectedAsset);
         this._highlightFeatureOnMap(selectedAsset, true);
       }));
@@ -321,7 +413,7 @@ function (
             this._prevOpenPanel !== "assetDetails") {
             this._myAssetsInstance.showSelectAsssetSection();
             this._handleNavigationArrowVisibility(true, false);
-          }else {
+          } else {
             //TODO: remove msg, and show panel
             this._myAssetsInstance.showMyAssets();
             this._showPanel("myAsset");
@@ -593,11 +685,15 @@ function (
     * @param{string} recipients email address
     * @memberOf widgets/Adopta/Widget
     */
-    _executeGPTask: function (appURL, emailAddress) {
+    _executeGPTask: function (appURL, emailAddress, action, actionTable) {
       var params = {
         "To_Address": emailAddress,
-        "App_URL": appURL
+        "App_URL": appURL,
+        "Action": action
       };
+      if (actionTable) {
+        params.Adopted_Assets = actionTable;
+      }
       this._loading.show();
       this._gpService.execute(params, lang.hitch(this, this._gpJobComplete),
         lang.hitch(this, this._gpJobFailed));
@@ -660,6 +756,65 @@ function (
         domClass.add(this.myAssestsPrevButton, "esriCTHidden");
       }
 
+    },
+
+    /**
+    * Returns the title to be shown in my asset list of the selected feature
+    * @param {Object} selectedFeature
+    * @memberOf widgets/Adopta/MyAssets
+    **/
+    _getAssetTitle: function (selectedFeature) {
+      var assetTitle;
+      if (lang.trim(this.config.nickNameField) !== "" &&
+        selectedFeature.attributes[this.config.nickNameField] &&
+        lang.trim(selectedFeature.attributes[this.config.nickNameField]) !== "") {
+        assetTitle = lang.trim(selectedFeature.attributes[this.config.nickNameField]);
+      } else if (lang.trim(selectedFeature.getTitle()) !== "") {
+        assetTitle = lang.trim(selectedFeature.getTitle());
+      } else if (selectedFeature.attributes[this._assetLayer.displayField]) {
+        assetTitle = selectedFeature.attributes[this._assetLayer.displayField];
+      } else {
+        assetTitle = selectedFeature.attributes[this._assetLayer.objectIdField];
+      }
+      return assetTitle;
+    },
+
+    _constructActionURL: function (features) {
+      var appURL, actionTable, tableBody, tableRow, tableData, actionTableDiv;
+      appURL = window.location.href;
+      actionTableDiv = domConstruct.create("div", {});
+      actionTable = domConstruct.create("table",
+        { "style": "border: 1px solid #ccc", "cellspacing": "0", "cellpadding": "10" },
+        actionTableDiv);
+      tableBody = domConstruct.create("tbody", {}, actionTable);
+      //Loop all the features
+      array.forEach(features, lang.hitch(this, function (feature) {
+        var objectId, title, appURL1;
+        tableRow = domConstruct.create("tr", {}, tableBody);
+        objectId = feature.attributes[this._assetLayer.objectIdField];
+        //Append userid to url parameter
+        appURL = this._addUrlParams(appURL, "userid",
+          this.config.userDetails[this.config.relatedTableDetails.keyField]);
+        title = this._getAssetTitle(feature);
+        tableData = domConstruct.create("td",
+          { "style": "border: 1px solid #ccc", "innerHTML": title },
+          tableRow);
+        array.forEach(this.config.actions.additionalActions, lang.hitch(this, function (action) {
+          appURL1 = "";
+          appURL1 = this._addUrlParams(appURL, action.urlParameterLabel, objectId);
+          tableData = domConstruct.create("td", { "style": "border: 1px solid #ccc" }, tableRow);
+          domConstruct.create("a", { "href": appURL1, "innerHTML": action.name }, tableData);
+        }));
+        //Add last column for fixed abondon action
+        appURL1 = this._addUrlParams(appURL,
+          this.config.actions.unAssign.urlParameterLabel,
+          objectId);
+        tableData = domConstruct.create("td", { "style": "border: 1px solid #ccc" }, tableRow);
+        domConstruct.create("a",
+          { "href": appURL1, "innerHTML": this.config.actions.unAssign.name },
+          tableData);
+      }));
+      return actionTableDiv.innerHTML;
     },
 
     /* Get selected Theme Color*/
