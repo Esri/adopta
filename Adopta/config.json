@@ -54,7 +54,7 @@
 			"fieldsToUpdate": [{
 				"field": "Assetstatus",
 				"action": "SetValue",
-				"value": "Needs Adoption"
+				"value": "Available"
 			}, {
 				"field": "Adopteddate",
 				"action": "Clear"
