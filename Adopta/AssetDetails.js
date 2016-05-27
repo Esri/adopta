@@ -16,7 +16,9 @@
   'esri/tasks/query',
   'dojo/Evented',
   'dojo/Deferred',
-  'dojo/string'
+  'dojo/string',
+  'jimu/utils',
+  'dojo/query'
 ], function (
   declare,
   array,
@@ -35,7 +37,9 @@
   Query,
   Evented,
   Deferred,
-  string
+  string,
+  jimuUtils,
+  dojoQuery
 ) {
   return declare([BaseWidget, _WidgetsInTemplateMixin, Evented], {
 
@@ -43,6 +47,10 @@
     templateString: template,
     nickNameInputTextBox: null,
     layer: null,
+    countLabel: null,
+    maxLength: null,
+    actionPerformedInDetails: [],
+    prevNicknameValue: null,
     constructor: function (options) {
       lang.mixin(this, options);
     },
@@ -87,13 +95,13 @@
     */
     _checkAssetAdoptionStatus: function (selectedFeature) {
       var relatedGUID, isAssetAdopted = false, isAssetAdoptedByLoggedInUser = false;
-      relatedGUID = selectedFeature.attributes[this.map._layers[
-        this.config.assetLayerDetails.id].relationships[0].keyField];
+      relatedGUID = selectedFeature.attributes[this.config.foreignKeyFieldForUserTable];
+
       if (relatedGUID && relatedGUID !== null && lang.trim(relatedGUID) !== "") {
         isAssetAdopted = true;
       }
       if (this.config.userDetails && isAssetAdopted && relatedGUID === this.config.userDetails[
-      this.config.relatedTableDetails.keyField]) {
+        this.config.foreignKeyFieldForUserTable]) {
         isAssetAdoptedByLoggedInUser = true;
       }
       return {
@@ -108,18 +116,31 @@
     * @memberOf widgets/Adopta/AssetDetails
     */
     _createAdoptActionContainer: function (assetStatus) {
-      var nicknameContainer, adoptBtnContainer, adoptBtn;
+      var nicknameContainer, adoptBtnContainer, adoptBtn, showNickNameInput;
       domConstruct.empty(this.adoptActionContainer);
-      //Hide textbox if asset is already adopted by other user
-      if (!assetStatus.isAssetAdopted || assetStatus.isAssetAdoptedByLoggedInUser) {
-        nicknameContainer = domConstruct.create("div", {
-          "class": "esriCTFullWidth"
-        }, this.adoptActionContainer);
-        //TODO : create actions container
-        this.nickNameInputTextBox = new TextBox({
-          placeHolder: this.nls.nameAssetTextBoxPlaceholder
-        });
-        this.nickNameInputTextBox.placeAt(nicknameContainer);
+      //nickname input will be shown only when nickname field is configured
+      if (this.config.nickNameField && this.config.nickNameField !== "") {
+        showNickNameInput = true;
+        //Hide textbox if asset is already adopted by other user
+        if (assetStatus.isAssetAdopted && !assetStatus.isAssetAdoptedByLoggedInUser) {
+          showNickNameInput = false;
+        }
+        if (showNickNameInput) {
+          this.countLabel = domConstruct.create("div", { "class": "esriCTCountLabelContainer" },
+            this.adoptActionContainer);
+          nicknameContainer = domConstruct.create("div", {
+            "class": "esriCTFullWidth"
+          }, this.adoptActionContainer);
+          this.nickNameInputTextBox = new TextBox({
+            placeHolder: this.nls.nameAssetTextBoxPlaceholder
+          });
+          this.nickNameInputTextBox.placeAt(nicknameContainer);
+          //set maximium length for nickname field
+          this._setTextAreaMaxLength();
+          this.own(on(this.nickNameInputTextBox, "keyup", lang.hitch(this, function () {
+            this._calculateCharactersCount();
+          })));
+        }
       }
       adoptBtnContainer = domConstruct.create("div", {
         "class": "esriCTAdoptButtonContainer"
@@ -133,14 +154,14 @@
       if (assetStatus.isAssetAdoptedByLoggedInUser) {
         this._createActionButtons();
       }
-      on(adoptBtn, "click", lang.hitch(this, function () {
+      this.own(on(adoptBtn, "click", lang.hitch(this, function () {
         if (!domClass.contains(adoptBtn, "jimu-state-disabled")) {
           //Check if user is logged in and accordingly perform the actions
           if (this.config.userDetails) {
             //Check if nick name field is empty
             if (this.nickNameInputTextBox) {
-              this.selectedFeature.attributes[this.config.nickNameField] = this.nickNameInputTextBox
-                .getValue();
+              this.selectedFeature.attributes[this.config.nickNameField] =
+                this.nickNameInputTextBox.getValue();
             }
             if (domAttr.get(adoptBtn, "innerHTML") === this.config.actions.assign.assignLabel) {
               this._adoptAsset(this.selectedFeature);
@@ -153,7 +174,7 @@
             this.showPanel("login");
           }
         }
-      }));
+      })));
     },
 
     /**
@@ -170,10 +191,19 @@
       } else {
         if (assetStatus.isAssetAdoptedByLoggedInUser) {
           if (this.config.nickNameField !== "") {
-            this.nickNameInputTextBox.set("value", this.selectedFeature.attributes[this.config
-            .nickNameField]);
+            this.nickNameInputTextBox.set("value",
+             this.selectedFeature.attributes[this.config.nickNameField]);
+            //Take current nickname fields value into variable which will be used to  compare content
+            this.prevNicknameValue = this.selectedFeature.attributes[this.config.nickNameField];
+            this._calculateCharactersCount();
           }
-          buttonText = this.nls.nickNameUpdateButtonLabel;
+          if (!this.config.nickNameField) {
+            domClass.add(adoptBtn, "jimu-state-disabled");
+            buttonText = this.config.actions.assign.assignedLabel;
+          } else {
+            domClass.add(adoptBtn, "jimu-state-disabled");
+            buttonText = this.nls.nickNameUpdateButtonLabel;
+          }
         } else {
           buttonText = this.config.actions.assign.assignLabel;
         }
@@ -241,12 +271,18 @@
     */
     _getAssetTitle: function (selectedFeature) {
       var adoptedAssetString;
-      if (lang.trim(selectedFeature.getTitle()) !== "") {
+      if (lang.trim(this.config.nickNameField) !== "" &&
+        selectedFeature.attributes[this.config.nickNameField] &&
+        lang.trim(selectedFeature.attributes[this.config.nickNameField]) !== "") {
+        adoptedAssetString = lang.trim(selectedFeature.attributes[this.config.nickNameField]);
+      } else if (selectedFeature.getTitle() && lang.trim(selectedFeature.getTitle()) !== "") {
         adoptedAssetString = lang.trim(selectedFeature.getTitle());
-      } else if (selectedFeature.attributes[this.layer.displayField]) {
+      } else if (selectedFeature.attributes[this.layer.displayField] &&
+        selectedFeature.attributes[this.layer.displayField] !== "") {
         adoptedAssetString = selectedFeature.attributes[this.layer.displayField];
       } else {
-        adoptedAssetString = "";
+        adoptedAssetString = this.layer.name + " : " +
+          selectedFeature.attributes[this.layer.objectIdField];
       }
       return adoptedAssetString;
     },
@@ -258,8 +294,8 @@
     */
     _adoptAsset: function (selectedFeature) {
       //Add users guid into asset to identify which asset belongs to user
-      selectedFeature.attributes[this.config.assetLayerDetails.keyField] = this.config
-        .userDetails[this.config.relatedTableDetails.keyField];
+      selectedFeature.attributes[this.config.foreignKeyFieldForUserTable] = this.config
+        .userDetails[this.config.foreignKeyFieldForUserTable];
       this.updateFieldsForAction(this.config.actions.assign.name, selectedFeature, true);
     },
 
@@ -271,9 +307,9 @@
     * @memberOf widgets/Adopta/AssetDetails
     */
     _updateFeatureDetails: function (selectedFeature, actionName, showAssetDetails) {
-      var isNewAssetAdopted,adoptionCompleteMsg;
+      var isNewAssetAdopted, adoptionCompleteMsg;
       //if action is adoopted it means new asset is addopted
-      if(actionName === this.config.actions.assign.name){
+      if (actionName === this.config.actions.assign.name) {
         isNewAssetAdopted = true;
       } else {
         isNewAssetAdopted = false;
@@ -286,10 +322,14 @@
         function (added, updated, deleted) {
           /*jshint unused: false*/
           if (updated[0].success) {
+            //update action performed array to show green check symbol for primary action
+            this._updateActionPerformedArray(actionName, selectedFeature);
             //Refresh layer and show the updated information in asset details panel
             this.layer.refresh();
             if (showAssetDetails) {
               this.showAssetInfoPopup(selectedFeature);
+            } else {
+              this.emit("showMyAssets", selectedFeature);
             }
             if (isNewAssetAdopted) {
               this.emit("showMessage", adoptionCompleteMsg);
@@ -301,6 +341,17 @@
               if (actionName === this.config.actions.unAssign.name) {
                 this.emit("showMessage", string.substitute(this.nls.abandonCompleteMsg,
                   { assetTitle: this._getAssetTitle(selectedFeature), actionName: actionName }));
+                if (selectedFeature.symbol) {
+                  selectedFeature.symbol = null;
+                }
+                //if action is unAssign update the symbol highlighting
+                this.emit("highlightFeatureOnMap", selectedFeature);
+              } else {
+                //Check if action name exsist, if not we assume user has updated assset's nickname
+                if (actionName) {
+                  this.emit("showMessage", string.substitute(this.nls.actionCompleteMsg,
+                   { actioName: actionName }));
+                }
               }
             }
           } else {
@@ -326,7 +377,7 @@
       var fieldsToUpdate;
       //check if action is unAssign choose its fields to update
       if (actionName === this.config.actions.unAssign.name) {
-        selectedFeature.attributes[this.config.assetLayerDetails.keyField] = null;
+        selectedFeature.attributes[this.config.foreignKeyFieldForUserTable] = null;
         fieldsToUpdate = this.config.actions.unAssign.fieldsToUpdate;
       } else if (actionName === this.config.actions.assign.name) {
         //check if action is assign choose its fields to update and set adopt action flag
@@ -427,16 +478,29 @@
     * @memberOf widgets/Adopta/AssetDetails
     */
     _createBtn: function (currentAction, parentNode) {
-      var actionBtn;
-      actionBtn = domConstruct.create("div", {
-        "class": "esriCTEllipsis jimu-btn esriCTStaticWidth",
-        "innerHTML": currentAction.name,
-        "title": currentAction.name
-      }, parentNode);
-      domAttr.set(actionBtn, "actionLabel", currentAction.name);
-      on(actionBtn, "click", lang.hitch(this, function (evt) {
-        this._fetchFieldsToBeUpdated(domAttr.get(evt.currentTarget, "actionLabel"));
-      }));
+      var actionBtn, actionBtnContainer, featureObjectId;
+      featureObjectId = this.selectedFeature.attributes[this.layer.objectIdField];
+      //If primary action is already perfomred on an asset, make sure we display green check box
+      if (this.actionPerformedInDetails &&
+        this.actionPerformedInDetails.indexOf(featureObjectId) !== -1 &&
+        currentAction.displayInMyAssets) {
+        actionBtnContainer = domConstruct.create("div", {
+          "class": "esriCTActionPerformedContainer"
+        }, parentNode);
+        domConstruct.create("div", {
+          "class": "esriCTAssetDetailsGreenCheck"
+        }, actionBtnContainer);
+      } else {
+        actionBtn = domConstruct.create("div", {
+          "class": "esriCTEllipsis jimu-btn esriCTStaticWidth",
+          "innerHTML": jimuUtils.sanitizeHTML(currentAction.name),
+          "title": currentAction.name
+        }, parentNode);
+        domAttr.set(actionBtn, "actionLabel", currentAction.name);
+        this.own(on(actionBtn, "click", lang.hitch(this, function (evt) {
+          this._fetchFieldsToBeUpdated(domAttr.get(evt.currentTarget, "actionLabel"));
+        })));
+      }
     },
 
     /**
@@ -446,6 +510,78 @@
     */
     _fetchFieldsToBeUpdated: function (actionName) {
       this.updateFieldsForAction(actionName, this.selectedFeature, true);
+    },
+
+    /**
+    * Display character count
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    _setTextAreaMaxLength: function () {
+      array.forEach(this.layer.fields, lang.hitch(this, function (currentField) {
+        if (currentField.name === this.config.nickNameField) {
+          this.maxLength = currentField.length;
+          return true;
+        }
+      }));
+      this.nickNameInputTextBox.set("maxlength", this.maxLength);
+      this.countLabel.innerHTML = this.maxLength;
+    },
+
+    /**
+    * Calculating character count of text area
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    _calculateCharactersCount: function () {
+      var count;
+      if (this.nickNameInputTextBox.getValue().length >= this.maxLength) {
+        this.nickNameInputTextBox.value =
+          this.nickNameInputTextBox.getValue().substring(0, this.maxLength);
+        this.nickNameInputTextBox.domNode.blur();
+        // Setting the count to "No" if character limit is exceeded
+        count = this.nickNameInputTextBox.getValue().length - this.maxLength;
+        this.countLabel.innerHTML = count;
+      } else {
+        // Decreasing the count and displaying the entered character in the textarea
+        count = this.maxLength - this.nickNameInputTextBox.getValue().length;
+        this.countLabel.innerHTML = count;
+      }
+      //Check if newly enterd value is different than actual saved value
+      if (lang.trim(this.nickNameInputTextBox.getValue()) !== this.prevNicknameValue) {
+        if (dojoQuery(".esriCTAdoptButton", this.domNode)[0]) {
+          domClass.remove(dojoQuery(".esriCTAdoptButton",
+            this.domNode)[0], "jimu-state-disabled");
+        }
+      } else {
+        domClass.add(dojoQuery(".esriCTAdoptButton",
+          this.domNode)[0], "jimu-state-disabled");
+      }
+    },
+
+    /**
+    * Update primary action array
+    * @param {string} current action
+    * @param {object} selected feature
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    _updateActionPerformedArray: function (actionName, selectedFeature) {
+      var objectId = selectedFeature.attributes[this.layer.objectIdField];
+      array.forEach(this.config.actions.additionalActions, lang.hitch(this,
+        function (currentAction) {
+          if (currentAction.name === actionName && currentAction.displayInMyAssets) {
+            if (this.actionPerformedInDetails &&
+              this.actionPerformedInDetails.indexOf(objectId) === -1) {
+              this.actionPerformedInDetails.push(objectId);
+            }
+          }
+        }));
+
+      //If asset is abonded, remove it from the actionPerformed array
+      if (this.actionPerformedInDetails &&
+        this.actionPerformedInDetails.indexOf(objectId) !== -1 &&
+        actionName === this.config.actions.unAssign.name) {
+        this.actionPerformedInDetails.splice(this.actionPerformedInDetails.indexOf(objectId), 1);
+      }
+      this.emit("updateActionsInAssets", this.actionPerformedInDetails);
     }
   });
 });
