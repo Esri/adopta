@@ -13,8 +13,9 @@
   'dojo/dom-attr',
   'dojo/on',
   'dojo/query',
-  'dojo/Deferred',
-  'esri/symbols/jsonUtils'
+  'esri/symbols/jsonUtils',
+  'jimu/utils',
+  'dojo/string'
 ], function (
   declare,
   array,
@@ -30,8 +31,9 @@
   domAttr,
   on,
   query,
-  Deferred,
-  symbolJsonUtils
+  symbolJsonUtils,
+  jimuUtils,
+  string
 ) {
   return declare([BaseWidget, _WidgetsInTemplateMixin, Evented], {
     baseClass: 'jimu-widget-Adopta-MyAssets',
@@ -51,17 +53,16 @@
       //get primary action (i.e. action to be displayed in my asset list)
       this._setPrimaryAction();
 
-      on(this.layer, "update-end", lang.hitch(this, function () {
+      this.own(on(this.layer, "update-end", lang.hitch(this, function () {
         if (this._updateLayerTimer && this.myAssets && this.myAssets.length > 0) {
           clearTimeout(this._updateLayerTimer);
-          console.log("clear");
         }
         this._updateLayerTimer = setTimeout(lang.hitch(this, function () {
           if (this.config.userDetails) {
             var queryField, i;
             queryField = new Query();
-            queryField.where = this.config.assetLayerDetails.keyField + " = '" +
-              this.config.userDetails[this.config.relatedTableDetails.keyField] + "'";
+            queryField.where = this.config.foreignKeyFieldForUserTable + " = '" +
+              this.config.userDetails[this.config.foreignKeyFieldForUserTable] + "'";
             queryField.returnGeometry = true;
             queryField.outFields = ["*"];
             // Query for the features with the loggedin UserID
@@ -75,7 +76,7 @@
             this._updateLayerTimer = null;
           }
         }), 100);
-      }));
+      })));
     },
 
     /**
@@ -126,12 +127,14 @@
         selectedFeature.attributes[this.config.nickNameField] &&
         lang.trim(selectedFeature.attributes[this.config.nickNameField]) !== "") {
         assetTitle = lang.trim(selectedFeature.attributes[this.config.nickNameField]);
-      } else if (lang.trim(selectedFeature.getTitle()) !== "") {
+      } else if (selectedFeature.getTitle() && lang.trim(selectedFeature.getTitle()) !== "") {
         assetTitle = lang.trim(selectedFeature.getTitle());
-      } else if (selectedFeature.attributes[this.layer.displayField]) {
+      } else if (selectedFeature.attributes[this.layer.displayField] &&
+        selectedFeature.attributes[this.layer.displayField] !== "") {
         assetTitle = selectedFeature.attributes[this.layer.displayField];
       } else {
-        assetTitle = "";
+        assetTitle = this.layer.name + " : " +
+          selectedFeature.attributes[this.layer.objectIdField];
       }
       return assetTitle;
     },
@@ -150,13 +153,6 @@
           item = domConstruct.create("div", {
             "class": "esriCTListItem"
           }, this.myAssetsSection);
-          itemHighlighter = domConstruct.create("div", {
-            "class": "esriCTListItemHighlight"
-          }, item);
-          itemTitle = domConstruct.create("div", {
-            "class": "esriCTListItemTitle esriCTCursorPointer esriCTEllipsis"
-          }, item);
-
           //if action is already performed, remove button and add green check image
           if (this._actionPerformed.indexOf(this.myAssets[i].attributes
             [this.layer.objectIdField]) !== -1) {
@@ -167,9 +163,16 @@
             itemActionButton = domConstruct.create("div", {
               "class": "esriCTListItemActionButton jimu-btn"
             }, item);
-            domAttr.set(itemActionButton, "innerHTML", this._primaryAction.name);
+            domAttr.set(itemActionButton, "innerHTML",
+              jimuUtils.sanitizeHTML(this._primaryAction.name));
             domAttr.set(itemActionButton, "title", this._primaryAction.name);
           }
+          itemHighlighter = domConstruct.create("div", {
+            "class": "esriCTListItemHighlight"
+          }, item);
+          itemTitle = domConstruct.create("div", {
+            "class": "esriCTListItemTitle esriCTCursorPointer esriCTEllipsis"
+          }, item);
 
           //set attributes to div which can be used to fetch feature from myAsset array
           domAttr.set(itemActionButton, "assetId", i);
@@ -181,8 +184,8 @@
           domAttr.set(itemTitle, "innerHTML", this._getAssetTitle(this.myAssets[i]));
           domAttr.set(itemTitle, "title", this._getAssetTitle(this.myAssets[i]));
           //handle click events to show asset details
-          on(item, "click", lang.hitch(this, this._showAssetDetails));
-          on(itemActionButton, "click", lang.hitch(this, this.performAction));
+          this.own(on(item, "click", lang.hitch(this, this._showAssetDetails)));
+          this.own(on(itemActionButton, "click", lang.hitch(this, this.performAction)));
 
           //If asset is aleady selected highlight it
           if (this._selectedAsset && this._selectedAsset.toString() ===
@@ -227,8 +230,8 @@
     getMyAssets: function (performActionsFromURL) {
       var queryField;
       queryField = new Query();
-      queryField.where = this.config.assetLayerDetails.keyField + " = '" +
-        this.config.userDetails[this.config.relatedTableDetails.keyField] + "'";
+      queryField.where = this.config.foreignKeyFieldForUserTable + " = '" +
+        this.config.userDetails[this.config.foreignKeyFieldForUserTable] + "'";
       queryField.returnGeometry = true;
       queryField.outFields = ["*"];
       // Query for the features with the loggedin UserID
@@ -252,7 +255,7 @@
       prevSelectedItem = query(".esriCTItemSelected", this.myAssetsSection);
       if (prevSelectedItem && prevSelectedItem[0]) {
         domClass.remove(prevSelectedItem[0], "esriCTItemSelected");
-        domStyle.set(prevSelectedItem[0], "backgroundColor", "#fff");
+        domStyle.set(prevSelectedItem[0], "backgroundColor", "transparent");
       }
     },
 
@@ -326,7 +329,7 @@
         }
       }
 
-      //If asset is abonded, remove it from the actionPerformed array
+      //If asset is abandoned, remove it from the actionPerformed array
       if (this._actionPerformed && this._actionPerformed.indexOf(objectId) !== -1 &&
         actionName === this.config.actions.unAssign.name) {
         this._actionPerformed.splice(this._actionPerformed.indexOf(objectId), 1);
@@ -334,6 +337,7 @@
       } else if (actionName === this.config.actions.unAssign.name) {
         this._selectedAsset = null;
       }
+      this.emit("updateActionsInDetails", this._actionPerformed);
       //update my assets
       this.getMyAssets();
     },
@@ -361,11 +365,14 @@
     * @memberOf widgets/Adopta/MyAssets
     **/
     _performActionFromURL: function () {
+      var objectId, isActionPerformed = false, actionName;
       if (this.config.urlParams.hasOwnProperty(this.config.actions.unAssign.urlParameterLabel)) {
+        actionName = this.config.actions.unAssign.name;
         array.some(this.myAssets, lang.hitch(this, function (currentGraphic) {
           if (currentGraphic.attributes[this.layer.objectIdField].toString() ===
             this.config.urlParams[this.config.actions.unAssign.urlParameterLabel].toString()) {
             this.emit("performAction", this.config.actions.unAssign.name, currentGraphic, true);
+            isActionPerformed = true;
             return true;
           }
         }));
@@ -373,10 +380,23 @@
         array.some(this.config.actions.additionalActions, lang.hitch(this,
           function (currentAction) {
           if (this.config.urlParams.hasOwnProperty(currentAction.urlParameterLabel)) {
+            actionName = currentAction.name;
             array.some(this.myAssets, lang.hitch(this, function (currentGraphic) {
               if (currentGraphic.attributes[this.layer.objectIdField].toString() ===
                 this.config.urlParams[currentAction.urlParameterLabel].toString()) {
-                this.emit("performAction", currentAction.name, currentGraphic, true);
+                objectId = currentGraphic.attributes[this.layer.objectIdField];
+                this.emit("performAction",
+                  currentAction.name,
+                  currentGraphic,
+                  !currentAction.displayInMyAssets);
+                //If action is primary do not show asset details panel
+                if (currentAction.displayInMyAssets &&
+                  query("[objectId = " + objectId + "]", this.myAssetsSection)[0]) {
+                  this._highlightRow(query("[objectId = " + objectId + "]",
+                    this.myAssetsSection)[0]);
+                  this.emit("highlightMyAsset", currentGraphic);
+                }
+                isActionPerformed = true;
                 return true;
               }
             }));
@@ -384,27 +404,11 @@
           }
         }));
       }
-    },
-
-    getMyAssetsList: function () {
-      var queryField, deferred = new Deferred();
-      queryField = new Query();
-      queryField.where = this.config.assetLayerDetails.keyField + " = '" +
-        this.config.userDetails[this.config.relatedTableDetails.keyField] + "'";
-      queryField.returnGeometry = true;
-      queryField.outFields = ["*"];
-      // Query for the features with the loggedin UserID
-      this.layer.queryFeatures(queryField, lang.hitch(this, function (
-          response) {
-        if (response && response.features) {
-          deferred.resolve(response.features);
-        } else {
-          deferred.reject([]);
-        }
-      }), function () {
-        deferred.reject([]);
-      });
-      return deferred;
+      //if some action exist in url but not performed then show error msg
+      if (actionName && !isActionPerformed) {
+        this.emit("showMessage", string.substitute(this.nls.unableToPerformAction,
+          { actionName: actionName }));
+      }
     }
   });
 });

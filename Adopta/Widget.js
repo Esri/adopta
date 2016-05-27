@@ -11,6 +11,7 @@ define([
   'jimu/dijit/Message',
   'jimu/dijit/LoadingIndicator',
   'dojo/on',
+  'dojo/string',
   'dojo/dom-construct',
   'esri/layers/GraphicsLayer',
   'esri/geometry/Point',
@@ -19,7 +20,6 @@ define([
   'esri/symbols/SimpleLineSymbol',
   'esri/symbols/SimpleMarkerSymbol',
   'esri/Color',
-  'dojo/_base/array',
   'esri/tasks/Geoprocessor',
   'jimu/utils',
   'esri/request',
@@ -39,6 +39,7 @@ function (
   Message,
   LoadingIndicator,
   on,
+  string,
   domConstruct,
   GraphicsLayer,
   Point,
@@ -47,7 +48,6 @@ function (
   SimpleLineSymbol,
   SimpleMarkerSymbol,
   Color,
-  array,
   Geoprocessor,
   jimuUtils,
   esriRequest,
@@ -55,7 +55,6 @@ function (
   geometryEngine) {
   return declare([BaseWidget], {
     baseClass: 'jimu-widget-Adopta', //Widget base class name
-    urlParamsToBeAdded: {}, //Parameters to be added in url which will be sent via email
     _isValidConfig: null, //Flag to check whether config has valid data for the widget
     _assetLayer: null, //Holds an object of configured asset layer from webmap
     _prevOpenPanel: null, //Holds the name of previously open panel
@@ -79,6 +78,8 @@ function (
       this.config.urlParams = this._getUrlParams();
       //add key in config to hold userDetails
       this.config.userDetails = null;
+      //hardcoded email field as it is not fetched form user table
+      this.config.emailField = "email";
       //Check for valid configuration
       if (this._isValidConfig) {
         //Get theme color
@@ -90,23 +91,17 @@ function (
         }
         //Initialize loading widget
         this._initLoading();
-        //create login instance
-        this._createLoginInstance();
         this._assetLayer = this.map.getLayer(this.config.assetLayerDetails.id);
-        //get related key filed for the layer
-        array.some(this._assetLayer.relationships, lang.hitch(this, function (currentRelationship) {
-          if (currentRelationship.id === this.config.relatedTableDetails.relationShipId) {
-            this.config.assetLayerDetails.keyField = currentRelationship.keyField;
-            return true;
-          }
-        }));
         //Set Map Tooltip Handler
         this._createMapTooltipHandler();
         //Panel to show asset details
         this._createAssetDetailsPanel();
         //Panel to show my assets
         this._createMyAssetsInstance();
-        on(this.loginInfoSectionPanel, "click", lang.hitch(this, this._myAssestsBtnClicked));
+        //create login instance
+        this._createLoginInstance();
+        this.own(on(this.loginInfoSectionPanel, "click",
+          lang.hitch(this, this._myAssestsBtnClicked)));
         //create & add graphics layer to highlight selected feature
         this._featureGraphicsLayer = new GraphicsLayer();
         this.map.addLayer(this._featureGraphicsLayer);
@@ -158,7 +153,8 @@ function (
         nls: this.nls,
         map: this.map,
         config: this.config,
-        loading: this._loading
+        loading: this._loading,
+        layer: this._assetLayer
       }, domConstruct.create("div", {}, this.loginSection));
       this._loginInstance.on("showMessage", lang.hitch(this, this._showMessage));
       this._loginInstance.on("loggedIn", lang.hitch(this, function (userDetails) {
@@ -181,13 +177,14 @@ function (
           }));
         }
         //handle map click handler as once user is logged in he can add assets
-        on(this.map, "click", lang.hitch(this, this._onMapClicked));
+        this.own(on(this.map, "click", lang.hitch(this, this._onMapClicked)));
       }));
       this._loginInstance.on("signedIn", lang.hitch(this, this._onSignedIn));
       this._loginInstance.on("invalidLogin", lang.hitch(this, function () {
         this._showPanel("login");
         this._mapTooltipHandler.connectEventHandler();
       }));
+      this._loginInstance.startup();
     },
 
     /**
@@ -207,7 +204,8 @@ function (
         //on map click create asset only if any other asset does not exist in near by area
         if (features.length === 0) {
           this._confirmationBox = new Message({
-            message: this.nls.addAssetConfirmationMsg,
+            message: string.substitute(this.nls.addAssetConfirmationMsg,
+              { layerName: this._assetLayer.name }),
             type: "question",
             buttons: [{
               "label": this.nls.yesButtonLabel, "onClick": lang.hitch(this, function () {
@@ -255,30 +253,11 @@ function (
     * @params {Object} userDetails containing user info
     * @memberOf widgets/Adopta/Widget
     */
-    _onSignedIn: function (userDetails, isAlreadySignedIn) {
-      var appURL = window.location.href, actionTable = null;
-      this.config.userDetails = lang.clone(userDetails);
-      this.urlParamsToBeAdded.userid = userDetails[this.config.relatedTableDetails.keyField];
-      for (var key in this.urlParamsToBeAdded) {
-        appURL = this._addUrlParams(appURL, key, this.urlParamsToBeAdded[key]);
-      }
-      //TODO: check an alternative to load app in builder mode and support the mode parameter
-      appURL = jimuUtils.url.removeQueryParamFromUrl(appURL, "mode");
-      if (isAlreadySignedIn) {
-        this._myAssetsInstance.getMyAssetsList().then(lang.hitch(this, function (objectIdsArray) {
-          if (objectIdsArray.length > 0) {
-            actionTable = this._constructActionURL(objectIdsArray);
-          } else {
-            actionTable = this.config.noAssetsFoundsMsg;
-          }
-          this._executeGPTask(appURL, userDetails[this.config.emailField], "login", actionTable);
-        }));
-      } else {
-        this._executeGPTask(appURL, userDetails[this.config.emailField], "signup", null);
-      }
+    _onSignedIn: function (message) {
       //Dont show the tooltip once user is logged in
       this._showtooltip = false;
       this._mapTooltipHandler.disconnectEventHandler();
+      this._showStatusMessage(message);
     },
 
     /**
@@ -326,11 +305,21 @@ function (
       }));
       //Add url params on adopting a asset
       on(this._assetDetails, "adoptAsset", lang.hitch(this, function (objectId) {
-        this.urlParamsToBeAdded[this.config.actions.assign.urlParameterLabel] = objectId;
+        this._loginInstance.addURLParams(this.config.actions.assign.urlParameterLabel, objectId);
       }));
       //Highlight feature on map
       on(this._assetDetails, "highlightFeatureOnMap", lang.hitch(this, function (selectedFeature) {
         this._highlightFeatureOnMap(selectedFeature, true);
+      }));
+
+      on(this._assetDetails, "updateActionsInAssets", lang.hitch(this, function (actionsArray) {
+        this._myAssetsInstance._actionPerformed = actionsArray;
+      }));
+
+      on(this._assetDetails, "showMyAssets", lang.hitch(this, function () {
+        this._myAssetsInstance.showMyAssets();
+        this._showPanel("myAsset");
+        this._handleNavigationArrowVisibility(false, true);
       }));
     },
 
@@ -346,6 +335,8 @@ function (
         layer: this._assetLayer,
         loading: this._loading
       }, domConstruct.create("div", {}, this.myAssetsSection));
+      this._myAssetsInstance.on("showMessage", lang.hitch(this, this._showMessage));
+
       on(this._myAssetsInstance, "updateMyAssetCount", lang.hitch(this, function (count) {
         if (count > 0) {
           if (window.isRTL) {
@@ -393,6 +384,11 @@ function (
       on(this._myAssetsInstance, "highlightMyAsset", lang.hitch(this, function (selectedFeature) {
         this._highlightFeatureOnMap(selectedFeature, false);
       }));
+
+      on(this._myAssetsInstance, "updateActionsInDetails", lang.hitch(this,
+        function (actionsArray) {
+        this._assetDetails.actionPerformedInDetails = actionsArray;
+      }));
     },
 
     /**
@@ -405,7 +401,8 @@ function (
       } else {
         //If the selected asset was abonded, we need to clear the selected map graphics
         //beacuse the asset will not be present on myassets list
-        if (!this._myAssetsInstance.getSelectedAsset()) {
+        if (!this._myAssetsInstance.getSelectedAsset() ||
+          this._myAssetsInstance.myAssets.length === 0) {
           this._clearGrahics();
         }
         if (this._myAssetsInstance && this._myAssetsInstance.myAssets.length > 0) {
@@ -414,7 +411,6 @@ function (
             this._myAssetsInstance.showSelectAsssetSection();
             this._handleNavigationArrowVisibility(true, false);
           } else {
-            //TODO: remove msg, and show panel
             this._myAssetsInstance.showMyAssets();
             this._showPanel("myAsset");
             this._handleNavigationArrowVisibility(false, true);
@@ -457,7 +453,10 @@ function (
       if (!this.config.assetLayerDetails || !this.map.getLayer(this.config.assetLayerDetails.id)) {
         this._displayWidgetError(this.nls.invalidConfigurationMessage);
         return false;
-      } else if (!this.config.gpServiceURL) { //if gpservice url is not configured display error
+      }
+      //if gpservice url or foreign key field is not configured display error
+      if (!this.config.authGPServiceURL || !this.config.foreignKeyFieldForUserTable ||
+        this.config.foreignKeyFieldForUserTable === "") {
         this._displayWidgetError(this.nls.invalidConfigurationMessage);
         return false;
       }
@@ -680,61 +679,13 @@ function (
     /* End Of Section For Highlighting Selected Point Feature */
 
     /**
-    * Funtion is used to send emails to respective email address
-    * @param{string} application URL
-    * @param{string} recipients email address
-    * @memberOf widgets/Adopta/Widget
-    */
-    _executeGPTask: function (appURL, emailAddress, action, actionTable) {
-      var params = {
-        "To_Address": emailAddress,
-        "App_URL": appURL,
-        "Action": action
-      };
-      if (actionTable) {
-        params.Adopted_Assets = actionTable;
-      }
-      this._loading.show();
-      this._gpService.execute(params, lang.hitch(this, this._gpJobComplete),
-        lang.hitch(this, this._gpJobFailed));
-    },
-
-    /**
-    * Success call back
-    * @param{object} status of excecuted job
-    * @memberOf widgets/Adopta/Widget
-    */
-    _gpJobComplete: function (jobInfo) {
-      if (jobInfo[0].value === "Success") {
-        this._showStatusMessage(true);
-      } else {
-        this._showStatusMessage(false);
-      }
-      this._loading.hide();
-    },
-
-    /**
-    * Error call back
-    * @param{object} status of excecuted job
-    * @memberOf widgets/Adopta/Widget
-    */
-    _gpJobFailed: function () {
-      this._showStatusMessage(false);
-      this._loading.hide();
-    },
-
-    /**
     * Function is used to show appropriate message after completion of task
     * @param{boolean} flag which indicates wether the job was successfull/failed
     * @memberOf widgets/Adopta/Widget
     */
-    _showStatusMessage: function (isJobSuccessfull) {
+    _showStatusMessage: function (message) {
       domClass.add(this.widgetMainNode, "esriCTHidden");
-      if (!isJobSuccessfull) {
-        domAttr.set(this.loginStatusMessage, "innerHTML", this.nls.gpServiceLoginFailedMsg);
-      } else {
-        domAttr.set(this.loginStatusMessage, "innerHTML", this.nls.gpServiceSuccessMsg);
-      }
+      domAttr.set(this.loginStatusMessage, "innerHTML", message);
       domClass.remove(this.loginStatusMessage, "esriCTHidden");
     },
 
@@ -769,7 +720,7 @@ function (
         selectedFeature.attributes[this.config.nickNameField] &&
         lang.trim(selectedFeature.attributes[this.config.nickNameField]) !== "") {
         assetTitle = lang.trim(selectedFeature.attributes[this.config.nickNameField]);
-      } else if (lang.trim(selectedFeature.getTitle()) !== "") {
+      } else if (selectedFeature.getTitle() && lang.trim(selectedFeature.getTitle()) !== "") {
         assetTitle = lang.trim(selectedFeature.getTitle());
       } else if (selectedFeature.attributes[this._assetLayer.displayField]) {
         assetTitle = selectedFeature.attributes[this._assetLayer.displayField];
@@ -777,44 +728,6 @@ function (
         assetTitle = selectedFeature.attributes[this._assetLayer.objectIdField];
       }
       return assetTitle;
-    },
-
-    _constructActionURL: function (features) {
-      var appURL, actionTable, tableBody, tableRow, tableData, actionTableDiv;
-      appURL = window.location.href;
-      actionTableDiv = domConstruct.create("div", {});
-      actionTable = domConstruct.create("table",
-        { "style": "border: 1px solid #ccc", "cellspacing": "0", "cellpadding": "10" },
-        actionTableDiv);
-      tableBody = domConstruct.create("tbody", {}, actionTable);
-      //Loop all the features
-      array.forEach(features, lang.hitch(this, function (feature) {
-        var objectId, title, appURL1;
-        tableRow = domConstruct.create("tr", {}, tableBody);
-        objectId = feature.attributes[this._assetLayer.objectIdField];
-        //Append userid to url parameter
-        appURL = this._addUrlParams(appURL, "userid",
-          this.config.userDetails[this.config.relatedTableDetails.keyField]);
-        title = this._getAssetTitle(feature);
-        tableData = domConstruct.create("td",
-          { "style": "border: 1px solid #ccc", "innerHTML": title },
-          tableRow);
-        array.forEach(this.config.actions.additionalActions, lang.hitch(this, function (action) {
-          appURL1 = "";
-          appURL1 = this._addUrlParams(appURL, action.urlParameterLabel, objectId);
-          tableData = domConstruct.create("td", { "style": "border: 1px solid #ccc" }, tableRow);
-          domConstruct.create("a", { "href": appURL1, "innerHTML": action.name }, tableData);
-        }));
-        //Add last column for fixed abondon action
-        appURL1 = this._addUrlParams(appURL,
-          this.config.actions.unAssign.urlParameterLabel,
-          objectId);
-        tableData = domConstruct.create("td", { "style": "border: 1px solid #ccc" }, tableRow);
-        domConstruct.create("a",
-          { "href": appURL1, "innerHTML": this.config.actions.unAssign.name },
-          tableData);
-      }));
-      return actionTableDiv.innerHTML;
     },
 
     /* Get selected Theme Color*/
