@@ -286,14 +286,14 @@ def chunklist(l, n):
     for i in range(0, len(l), n):
         yield l[i:i+n]
 
-def get_adopted_assets(asset_oids, asset_layer, asset_titlefields):
+def get_adopted_assets(asset_oids, asset_layer, asset_titlefields, wconfig):
     """ get asset details in chunks of 100 """
     chunks = chunklist(asset_oids, 100)
     asset_features = []
     fields = [asset_titlefields["nicknamefield"],
               asset_titlefields["displayfield"],
               asset_titlefields["objectidfield"],
-              asset_layer.relationships[0]["keyField"]]
+              wconfig.get("foreignKeyFieldForUserTable")]
     fields.extend(asset_titlefields["popupfields"])
     # get unique set of fields
     out_fields = ",".join(set(fields))
@@ -555,12 +555,16 @@ def update_usertoken(email_address=""):
     """ updates expired usertoken and tokendate """
 
     try:
+        desc = arcpy.Describe(user_table)
+        # is the table versioned?
+        is_versioned = desc.isVersioned
         # get workspace
-        wksp = arcpy.Describe(user_table).path
+        wksp = desc.path
         # Start an edit session. Must provide the workspace.
         edit = arcpy.da.Editor(wksp)
-        # start editing without undo/redo stack and without multiuser mode
-        edit.startEditing(False, False)
+        # start editing without undo/redo stack and without multiuser mode for non-versioned
+        # and with multiuser mode for versioned table
+        edit.startEditing(False, is_versioned)
         # Start an edit operation
         edit.startOperation()
         where_clause = "UPPER(EMAIL)='{0}'".format(email_address.upper())
@@ -659,7 +663,7 @@ def main():
         return
 
     # get adopted asset details in chunks of 100
-    assets = get_adopted_assets(asset_oids, asset_layer, asset_titlefields)
+    assets = get_adopted_assets(asset_oids, asset_layer, asset_titlefields, wconfig)
     if len(assets) == 0:
         send_msg("No adopted assets", "success")
         return
