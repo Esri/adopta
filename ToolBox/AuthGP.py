@@ -35,7 +35,7 @@ Copyright 2016 Esri
 #                       8. userid: guid in url parameter when login link is clicked in email
 #                       9. usertoken: guid in url parameter when login link is clicked in email
 #               -----constants in gpservice, not exposed in REST:
-#                       10. user_table: path to user table in enterprise gdb
+#                       10. user_table: path to user table in workgroup/enterprise gdb
 #                       11. user_email_field: field to store email address
 #                       12. user_team_field: field to store team names
 #                       13. user_token_field: field to store guid token for user
@@ -88,7 +88,6 @@ user_team_field = arcpy.GetParameterAsText(5)
 user_token_field = arcpy.GetParameterAsText(6)
 token_date_field = arcpy.GetParameterAsText(7)
 token_expiry_minutes = arcpy.GetParameterAsText(8)
-token_expiry_minutes = "5"
 assetlyr_url = arcpy.GetParameterAsText(9)
 assetlyr_username = arcpy.GetParameterAsText(10)
 assetlyr_password = arcpy.GetParameterAsText(11)
@@ -116,7 +115,11 @@ def send_msg(message, messagetype="message",):
     if messagetype.lower() == "warning":
         arcpy.AddWarning(message)
     if messagetype.lower() == "error":
-        # set the result_output parameter in case of failures
+        if arcpy.ProductInfo() != "ArcServer":
+            arcpy.AddError("Failed. " + message)
+        else:
+            arcpy.AddMessage("Failed. " + message)
+        # set the result_output parameter
         out_message = {"status":"Failed", "description":message}
         arcpy.SetParameterAsText(28, out_message)
     if messagetype.lower() == "success":
@@ -288,12 +291,16 @@ def validate_url_token():
 def update_usertoken(expired_email=""):
     """ updates expired usertoken and tokendate """
     try:
+        desc = arcpy.Describe(user_table)
+        # is the table versioned?
+        is_versioned = desc.isVersioned
         # get workspace
-        wksp = arcpy.Describe(user_table).path
+        wksp = desc.path
         # Start an edit session. Must provide the workspace.
         edit = arcpy.da.Editor(wksp)
-        # start editing without undo/redo stack and without multiuser mode
-        edit.startEditing(False, False)
+        # start editing without undo/redo stack and without multiuser mode for non-versioned
+        # and with multiuser mode for versioned table
+        edit.startEditing(False, is_versioned)
         # Start an edit operation
         edit.startOperation()
         if action.lower() == "login":
@@ -359,7 +366,6 @@ def validate_newuser_signupfields():
     send_msg(in_fields)
     return in_fields
 
-
 def add_user():
     """ adds user to geodatabase using email and signup fields """
     fields = validate_newuser_signupfields()
@@ -371,21 +377,34 @@ def add_user():
     fields.update({token_date_field:datetime.utcnow()})
 
     # check email field length
-    table_fields = arcpy.Describe(user_table).fields
-    email_field = [field for field in table_fields if field.name == user_email_field][0]
-    if len(input_user_email) > email_field.length:
-        send_msg("Email address too long. Only {0} characters allowed.".format(
-                 email_field.length), "error")
+    try:
+        table_fields = arcpy.Describe(user_table).fields
+        email_field = []
+        email_field = [field for field in table_fields if field.name == user_email_field]
+        if len(email_field) == 0:
+            raise Exception("Could not find email field in user table")
+        if len(input_user_email) > email_field[0].length:
+            send_msg("Email address too long. Only {0} characters allowed. Found {1}.".format( \
+                     email_field[0].length, len(input_user_email)), "error")
+            return None, None
+    except Exception as e:
+        send_msg("Error occurred while evaluating email field length. Error: {0}".format(str(e)),
+                 "error")
         return None, None
 
     # insert row in geodatabase
     try:
+
+        desc = arcpy.Describe(user_table)
+        # is the table versioned?
+        is_versioned = desc.isVersioned
         # get workspace
-        wksp = arcpy.Describe(user_table).path
+        wksp = desc.path
         # Start an edit session. Must provide the workspace.
         edit = arcpy.da.Editor(wksp)
-        # start editing without undo/redo stack and without multiuser mode
-        edit.startEditing(False, False)
+        # start editing without undo/redo stack and without multiuser mode for non-versioned
+        # and with multiuser mode for versioned table
+        edit.startEditing(False, is_versioned)
         # Start an edit operation
         edit.startOperation()
         # insert row for new user
@@ -709,6 +728,7 @@ def process_login(email_address):
     # get widget config
     wconfig = convert_text_to_dict(widget_config, "widget config")
     if not wconfig:
+        send_msg("No widget configuration supplied", "error")
         return
 
     # get userid, usertoken
@@ -775,6 +795,10 @@ def return_unique_teamnames():
 
 def validate_inputs():
     """ validate input parameters """
+    if not arcpy.Exists(user_table):
+        send_msg("Could not connect to user table at {0}".format(str(user_table)), "error")
+        return False
+
     if action.lower() in ["signup", "login"]:
         if len(input_user_email) == 0:
             # no user email provided
