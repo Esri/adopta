@@ -315,6 +315,7 @@ def aggregate_adoptions(assets, wconfig):
     asset_guids = set()
     for asset in assets:
         asset_guids.add(asset.get_value(wconfig["foreignKeyFieldForUserTable"]))
+    send_msg("No of adopters: {0}".format(len(asset_guids)))
     users = []
     try:
         globalid_field = arcpy.Describe(user_table).globalIDFieldName
@@ -322,7 +323,7 @@ def aggregate_adoptions(assets, wconfig):
         for guid in asset_guids:
             user_guid = "{"+guid+"}"
             # globalids are stored in uppercase
-            whereclause = "UPPER({0})='{1}'".format(globalid_field, user_guid.upper())
+            whereclause = "{0}='{1}'".format(globalid_field, user_guid.upper())
             rowcount = 0
             with arcpy.da.SearchCursor(in_table=user_table,
                                        field_names=[user_email_field, user_token_field],
@@ -352,8 +353,7 @@ def aggregate_adoptions(assets, wconfig):
                                   "assets": assets_of_user})
         # if none of the assets found owners, then probably incorrect usertable or assetlayer is used
         if len(orphan_assets) == len(asset_guids):
-            send_msg("Incorrect usertable or asset layer. \
-                      None of the assets have owners.", "error")
+            send_msg("Incorrect usertable or asset layer. None of the assets have owners.", "error")
         return users, orphan_assets
     except Exception as e:
         send_msg("Unable to aggregate user emails. Error: {0}".format(str(e)), "error")
@@ -372,8 +372,8 @@ def print_adoptions_summary(adoptions, orphan_assets=None, verbose=True):
     send_msg("Orphans (adopted but owner not found): {0}".format(len(orphan_assets)))
     send_msg("="*30)
     send_msg("{0} email(s) will be sent.".format(len(adoptions)))
-    if verbose:
-        send_msg("="*30)
+    send_msg("="*30)
+    if verbose and len(adoptions) > 0:
         send_msg("Adoptions per user")
         send_msg("-"*30)
         for adopter in adoptions:
