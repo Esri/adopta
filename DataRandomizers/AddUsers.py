@@ -110,7 +110,7 @@ def main():
                 teamName  = randomword(12) + " " + randomword(5) + " " + randomword(20)
                 teamIdx = 1
             oids.append(icursor.insertRow([email,teamName,firstName,lastName]))
-          
+            teamIdx = teamIdx + 1
                
             print ("{0} of {1} added".format(i,numOfUsers))
     del icursor
