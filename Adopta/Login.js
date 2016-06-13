@@ -11,8 +11,10 @@
   'dojo/store/Memory',
   'dijit/form/ComboBox',
   'dojo/on',
+  'dojo/query',
   'dojo/dom-class',
   'dojo/dom-attr',
+  'dojo/dom-style',
   'dojo/keys',
   'jimu/utils',
   'esri/tasks/Geoprocessor'
@@ -29,8 +31,10 @@
   Memory,
   ComboBox,
   on,
+  query,
   domClass,
   domAttr,
+  domStyle,
   keys,
   jimuUtils,
   Geoprocessor
@@ -87,13 +91,16 @@
       }
 
       //SanitizeHTML before setting innerHTML
-      this.loginInfoContainer.innerHTML = jimuUtils.sanitizeHTML(this.config.loginHelpText);
+      this.loginInfoContainer.innerHTML = this.config.loginHelpText;
       //Check for url params
       if (this.config.urlParams && this.config.urlParams.userid &&
         this.config.urlParams.usertoken) {
         //check if user exist using userid from url so pass param as true
         this._checkIfUserExist(true);
       }
+
+      //set height of login info container
+      this._calculateHight();
     },
 
     /**
@@ -138,6 +145,7 @@
     **/
     _checkIfUserExist: function (usingUserID) {
       var params, appURL, popupTitle = "";
+      this.emit("userAuth");
       appURL = this._getAppURL();
       if (this.layer.infoTemplate &&
         this.layer.infoTemplate.info &&
@@ -185,30 +193,35 @@
           } else {
             this.signUpSuccessfull(this.nls.gpServiceSuccessMsg);
           }
+          this.loading.hide();
         } else {
           if (!usingUserID) {
             if (response[0].value && response[0].value.status.toLowerCase() === "failed" &&
-              typeof (response[0].value.description) === "string" &&
+            typeof (response[0].value.description) === "string" &&
               response[0].value.description.toLowerCase() === "user does not exist") {
               domAttr.set(this.loginBtn, "innerHTML", this.nls.signUpLabel);
-              //Check if team field and additional fields are configured and open the respective input controls
-              if (this.config.teamField && this.config.teamField.name &&
+              //If teamfield is not configured or additional fields are not configured then
+              //directly call signup
+              if (!this.config.teamField &&
                 this.config.additionalLoginParameters.length === 0) {
                 this._loginBtnClicked();
               } else {
                 domClass.remove(this.additionalFieldsContainer, "esriCTHidden");
-                domClass.add(this.loginInfoContainer, "esriCTMinimizeLoginInfoContainer");
+                //set height of login info container
+                this._calculateHight();
+                this.loading.hide();
               }
             } else {
               this.showMsg(response[0].value.description);
               this.emit("invalidLogin");
+              this.loading.hide();
             }
           } else {
             this.showMsg(response[0].value.description);
             this.emit("invalidLogin");
+            this.loading.hide();
           }
         }
-        this.loading.hide();
       }), lang.hitch(this, function (err) {
         this.loading.hide();
         this.showMsg(err.message);
@@ -253,6 +266,10 @@
     * @memberOf widgets/Adopta/Login
     **/
     _loginBtnClicked: function () {
+      //Focus out from the email textbox
+      if (this.emailTextbox.focusNode) {
+        this.emailTextbox.focusNode.blur();
+      }
       if (this.emailTextbox.isValid()) {
         this.userDetails[this.config.emailField] = this.emailTextbox.getValue();
         if (lang.trim(domAttr.get(this.loginBtn, "innerHTML")) === this.nls.signUpLabel) {
@@ -266,10 +283,6 @@
           this._checkIfUserExist(false);
         }
       } else {
-        //Focus out from the email textbox
-        if (this.emailTextbox.focusNode) {
-          this.emailTextbox.focusNode.blur();
-        }
         this.showMsg(this.nls.invalidEmailMsg);
       }
     },
@@ -298,7 +311,6 @@
       this.loading.show();
       // create an empty array object
       attributes = {};
-      //attributes[this.config.emailField] = this.emailTextbox.getValue();
       if (this._teamFieldComboBox) {
         attributes[this.config.teamField.name] = this._teamFieldComboBox.getValue();
       }
@@ -382,8 +394,23 @@
       this._teamFieldComboBox.placeAt(this.teamContainer);
     },
 
+    /**
+    * Add URL parameters to application link
+    * @memberOf widgets/Adopta/Login
+    **/
     addURLParams: function (key, value) {
       this.urlParamsToBeAdded[key] = value;
+    },
+
+    /**
+    * Calculate hegiht for login info container
+    * @memberOf widgets/Adopta/Login
+    **/
+    _calculateHight: function () {
+      var fixedHeight;
+      fixedHeight = query(".esriCTLoginSection")[0].clientHeight - this.loginDetailsContainer
+        .clientHeight;
+      domStyle.set(this.loginInfoContainer, "height", fixedHeight - 40 + "px");
     },
 
     /* ----------------------- */
@@ -401,6 +428,5 @@
     signUpSuccessfull: function (message) {
       this.emit("signedIn", message);
     }
-
   });
 });

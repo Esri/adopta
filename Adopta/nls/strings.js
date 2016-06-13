@@ -22,7 +22,8 @@ define({
     "nickNameUpdateButtonLabel": "Update", //Shown as label for nickName update button
     "adoptionCompleteMsg": "Thank you for adopting ${assetTitle}", //Shown as message in popup after asset is adopted
     "abandonCompleteMsg": "Asset successfully abandoned.", //Shown as message in popup after asset is abondend
-    "actionCompleteMsg": "Updated status ${actioName} successfully", //Shown as message in popup action is completed
+    "actionCompleteMsg": "Updated status ${actionName} successfully", //Shown as message in popup action is completed
+    "actionFailedMsg": "Unable to perform status ${actionName}", // Shown as meesage in popup when action failed.
     "unableToPerformAction": "Unable to update status ${actionName}. The Asset is not in your list.", //Shown as message in popup when unable to perform action specified from URL
     "invalidAppLinkMsg": "Invalid Application link.", //Shown as message in popup if the invalid url parameters are passed
     "assetNotFoundMsg": "Asset not found.", //Shown as message in popup if the invalid url parameters are passed for adopting asset
