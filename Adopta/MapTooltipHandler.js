@@ -138,6 +138,10 @@
       this.emit("clicked", evt);
     },
 
+    /**
+    * Update map tooltip
+    * @memberOf widgets/Adopta/MapTooltipHandler
+    **/
     updateTooltip: function () {
       this._mapTooltip.innerHTML = this.nls.selectAssetToolTipAfterLogin;
     }

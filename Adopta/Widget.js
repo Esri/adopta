@@ -166,7 +166,8 @@ function (
         this._myAssetsInstance.getMyAssets(true);
         //navigate to myAsset panel
         this._showPanel("myAsset");
-        //once user is logged in the functionality to add assets will be enabled so update the tooltip
+        //once user is logged in the functionality to add assets will be enabled so connect and update the tooltip
+        this._mapTooltipHandler.connectEventHandler();
         this._mapTooltipHandler.updateTooltip();
         parameterLabel = this.config.actions.assign.urlParameterLabel;
         //check for url params has adoptId addopt the selected asset
@@ -183,6 +184,10 @@ function (
       this._loginInstance.on("invalidLogin", lang.hitch(this, function () {
         this._showPanel("login");
         this._mapTooltipHandler.connectEventHandler();
+      }));
+
+      this._loginInstance.on("userAuth", lang.hitch(this, function () {
+        this._mapTooltipHandler.disconnectEventHandler();
       }));
       this._loginInstance.startup();
     },
@@ -428,7 +433,9 @@ function (
     * @memberOf widgets/Adopta/Widget
     */
     onOpen: function () {
-      if (this._isValidConfig && this._showtooltip) {
+      if (this._isValidConfig && this._showtooltip &&
+        this.config.urlParams && !this.config.urlParams.userid &&
+        !this.config.urlParams.usertoken) {
         this._mapTooltipHandler.connectEventHandler();
       }
     },

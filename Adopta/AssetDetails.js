@@ -51,6 +51,7 @@
     maxLength: null,
     actionPerformedInDetails: [],
     prevNicknameValue: null,
+    primaryAction: null,
     constructor: function (options) {
       lang.mixin(this, options);
     },
@@ -68,6 +69,27 @@
       if (this.config.showReverseGeocodedAddress) {
         domClass.remove(this.streetAddressContainer, "esriCTHidden");
         this._initReverseGeocoder();
+      }
+      //get primary action
+      this._setPrimaryAction();
+    },
+
+    /**
+    * Set's primary action to be considered from the configuration
+    * @memberOf widgets/Adopta/MyAssets
+    **/
+    _setPrimaryAction: function () {
+      var i;
+      if (this.config.actions.unAssign.displayInMyAssets) {
+        this.primaryAction = lang.clone(this.config.actions.unAssign);
+      }
+      else {
+        for (i = 0; i < this.config.actions.additionalActions.length; i++) {
+          if (this.config.actions.additionalActions[i].displayInMyAssets) {
+            this.primaryAction = lang.clone(this.config.actions.additionalActions[i]);
+            break;
+          }
+        }
       }
     },
 
@@ -155,6 +177,7 @@
         this._createActionButtons();
       }
       this.own(on(adoptBtn, "click", lang.hitch(this, function () {
+        var updatedAttributes = {};
         if (!domClass.contains(adoptBtn, "jimu-state-disabled")) {
           //Check if user is logged in and accordingly perform the actions
           if (this.config.userDetails) {
@@ -162,12 +185,14 @@
             if (this.nickNameInputTextBox) {
               this.selectedFeature.attributes[this.config.nickNameField] =
                 this.nickNameInputTextBox.getValue();
+              updatedAttributes[this.config.nickNameField] =
+                this.nickNameInputTextBox.getValue();
             }
             if (domAttr.get(adoptBtn, "innerHTML") === this.config.actions.assign.assignLabel) {
               this._adoptAsset(this.selectedFeature);
             } else {
               //as we are updateing only the nick name field send action as null
-              this._updateFeatureDetails(this.selectedFeature, null, true);
+              this._updateFeatureDetails(this.selectedFeature, null, true, updatedAttributes);
             }
           } else {
             this.emit("adoptAsset", this.selectedFeature.attributes[this.layer.objectIdField]);
@@ -306,19 +331,32 @@
     * @param {boolean} flag to decide the visibility of details panel
     * @memberOf widgets/Adopta/AssetDetails
     */
-    _updateFeatureDetails: function (selectedFeature, actionName, showAssetDetails) {
-      var isNewAssetAdopted, adoptionCompleteMsg;
+    _updateFeatureDetails: function(selectedFeature, actionName, showAssetDetails,
+     updatedAttributes) {
+      var isNewAssetAdopted, adoptionCompleteMsg, updatedFeatureAttributes = {},
+      showMesssage = true;
       //if action is adoopted it means new asset is addopted
       if (actionName === this.config.actions.assign.name) {
         isNewAssetAdopted = true;
+        //If action is assign, check if nick name field has some value and pass the
+        //attribute to apply edits
+        if (this.config.nickNameField && this.nickNameInputTextBox &&
+          lang.trim(this.nickNameInputTextBox.getValue()) !== "") {
+          updatedAttributes[this.config.nickNameField] = this.nickNameInputTextBox.getValue();
+        }
       } else {
         isNewAssetAdopted = false;
       }
+      //Add objectId of selected Feature before updating the feature values
+      updatedAttributes[this.layer.objectIdField] =
+        selectedFeature.attributes[this.layer.objectIdField];
+      //pass all the updated values to desired object
+      updatedFeatureAttributes.attributes = updatedAttributes;
       this.loading.show();
       adoptionCompleteMsg = string.substitute(this.nls.adoptionCompleteMsg, {
         'assetTitle': this._getAssetTitle(selectedFeature)
       });
-      this.layer.applyEdits(null, [selectedFeature], null, lang.hitch(this,
+      this.layer.applyEdits(null, [updatedFeatureAttributes], null, lang.hitch(this,
         function (added, updated, deleted) {
           /*jshint unused: false*/
           if (updated[0].success) {
@@ -344,24 +382,40 @@
                 if (selectedFeature.symbol) {
                   selectedFeature.symbol = null;
                 }
-                //if action is unAssign update the symbol highlighting
+                //if action is unAssign update the highlight symbol
                 this.emit("highlightFeatureOnMap", selectedFeature);
               } else {
                 //Check if action name exsist, if not we assume user has updated assset's nickname
-                if (actionName) {
+                if ((this.primaryAction && this.primaryAction.name === actionName) ||
+                  !actionName) {
+                  showMesssage = false;
+                }
+                if (showMesssage) {
                   this.emit("showMessage", string.substitute(this.nls.actionCompleteMsg,
-                   { actioName: actionName }));
+                    { actionName: actionName }));
                 }
               }
             }
           } else {
-            //Show error if adoption fails
-            this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
+            //if action is adoopted it means new asset is addopted
+            if (actionName === this.config.actions.assign.name) {
+              //Show error if adoption fails
+              this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
+            } else {
+              this.emit("showMessage", string.substitute(this.nls.actionFailedMsg,
+                { actionName: actionName }));
+            }
           }
           this.loading.hide();
         }), lang.hitch(this, function () {
-          //Show error if adoption fails
-          this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
+          //if action is adoopted it means new asset is addopted
+          if (actionName === this.config.actions.assign.name) {
+            //Show error if adoption fails
+            this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
+          } else {
+            this.emit("showMessage", string.substitute(this.nls.actionFailedMsg,
+              { actionName: actionName }));
+          }
           this.loading.hide();
         }));
     },
@@ -374,12 +428,17 @@
     * @memberOf widgets/Adopta/AssetDetails
     */
     updateFieldsForAction: function (actionName, selectedFeature, showAssetDetails) {
-      var fieldsToUpdate;
+      var fieldsToUpdate, updatedAttributes = {};
       //check if action is unAssign choose its fields to update
       if (actionName === this.config.actions.unAssign.name) {
         selectedFeature.attributes[this.config.foreignKeyFieldForUserTable] = null;
+        //Remove related GUI field from respective field
+        updatedAttributes[this.config.foreignKeyFieldForUserTable] = null;
         fieldsToUpdate = this.config.actions.unAssign.fieldsToUpdate;
       } else if (actionName === this.config.actions.assign.name) {
+        //Add related GUI field from respective field
+        updatedAttributes[this.config.foreignKeyFieldForUserTable] = this.config
+        .userDetails[this.config.foreignKeyFieldForUserTable];
         //check if action is assign choose its fields to update and set adopt action flag
         fieldsToUpdate = this.config.actions.assign.fieldsToUpdate;
       }
@@ -398,16 +457,19 @@
           switch (currentAction.action) {
           case "SetValue":
             selectedFeature.attributes[currentAction.field] = currentAction.value;
+            updatedAttributes[currentAction.field] = currentAction.value;
             break;
           case "SetDate":
             selectedFeature.attributes[currentAction.field] = Date.now();
+            updatedAttributes[currentAction.field] = Date.now();
             break;
           case "Clear":
             selectedFeature.attributes[currentAction.field] = null;
+            updatedAttributes[currentAction.field] = null;
             break;
           }
         }));
-      this._updateFeatureDetails(selectedFeature, actionName, showAssetDetails);
+      this._updateFeatureDetails(selectedFeature, actionName, showAssetDetails, updatedAttributes);
     },
 
     /**
@@ -446,6 +508,7 @@
           });
           this.emit("showMessage", assetAlreadyAdoptedMsg);
         } else {
+          this.nickNameInputTextBox.set('value', "");
           this._adoptAsset(response.features[0]);
         }
         this.showAssetInfoPopup(response.features[0]);

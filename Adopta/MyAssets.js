@@ -153,19 +153,26 @@
           item = domConstruct.create("div", {
             "class": "esriCTListItem"
           }, this.myAssetsSection);
-          //if action is already performed, remove button and add green check image
-          if (this._actionPerformed.indexOf(this.myAssets[i].attributes
+          if (this._primaryAction) {
+            //if action is already performed, remove button and add green check image
+            if (this._actionPerformed.indexOf(this.myAssets[i].attributes
             [this.layer.objectIdField]) !== -1) {
-            itemActionButton = domConstruct.create("div", {
-              "class": "esriCTGreenCheck esriCTActionPerformed"
-            }, item);
-          } else {
-            itemActionButton = domConstruct.create("div", {
-              "class": "esriCTListItemActionButton jimu-btn"
-            }, item);
-            domAttr.set(itemActionButton, "innerHTML",
-              jimuUtils.sanitizeHTML(this._primaryAction.name));
-            domAttr.set(itemActionButton, "title", this._primaryAction.name);
+              itemActionButton = domConstruct.create("div", {
+                "class": "esriCTGreenCheck esriCTActionPerformed"
+              }, item);
+            } else {
+              itemActionButton = domConstruct.create("div", {
+                "class": "esriCTListItemActionButton jimu-btn"
+              }, item);
+              domAttr.set(itemActionButton, "innerHTML",
+                jimuUtils.sanitizeHTML(this._primaryAction.name));
+              domAttr.set(itemActionButton, "title", this._primaryAction.name);
+            }
+            //set attributes to div which can be used to fetch feature from myAsset array
+            domAttr.set(itemActionButton, "assetId", i);
+            //set action attribute to action button
+            domAttr.set(itemActionButton, "action", this._primaryAction.name);
+            this.own(on(itemActionButton, "click", lang.hitch(this, this.performAction)));
           }
           itemHighlighter = domConstruct.create("div", {
             "class": "esriCTListItemHighlight"
@@ -174,18 +181,13 @@
             "class": "esriCTListItemTitle esriCTCursorPointer esriCTEllipsis"
           }, item);
 
-          //set attributes to div which can be used to fetch feature from myAsset array
-          domAttr.set(itemActionButton, "assetId", i);
           domAttr.set(item, "assetId", i);
           domAttr.set(item, "objectId", this.myAssets[i].attributes[this.layer.objectIdField]);
-          //set action attribute to action button
-          domAttr.set(itemActionButton, "action", this._primaryAction.name);
           //set asset title & action button title
           domAttr.set(itemTitle, "innerHTML", this._getAssetTitle(this.myAssets[i]));
           domAttr.set(itemTitle, "title", this._getAssetTitle(this.myAssets[i]));
           //handle click events to show asset details
           this.own(on(item, "click", lang.hitch(this, this._showAssetDetails)));
-          this.own(on(itemActionButton, "click", lang.hitch(this, this.performAction)));
 
           //If asset is aleady selected highlight it
           if (this._selectedAsset && this._selectedAsset.toString() ===
@@ -322,20 +324,22 @@
     **/
     onActionPerformed: function (actionName, objectId) {
       //if selected action is primary action
-      if (this._primaryAction.name === actionName) {
-        //if selected action is performed on my asset
-        if (this._actionPerformed && this._actionPerformed.indexOf(objectId) === -1) {
-          this._actionPerformed.push(objectId);
+      if (this._primaryAction) {
+        if (this._primaryAction.name === actionName) {
+          //if selected action is performed on my asset
+          if (this._actionPerformed && this._actionPerformed.indexOf(objectId) === -1) {
+            this._actionPerformed.push(objectId);
+          }
         }
-      }
 
-      //If asset is abandoned, remove it from the actionPerformed array
-      if (this._actionPerformed && this._actionPerformed.indexOf(objectId) !== -1 &&
-        actionName === this.config.actions.unAssign.name) {
-        this._actionPerformed.splice(this._actionPerformed.indexOf(objectId), 1);
-        this._selectedAsset = null;
-      } else if (actionName === this.config.actions.unAssign.name) {
-        this._selectedAsset = null;
+        //If asset is abandoned, remove it from the actionPerformed array
+        if (this._actionPerformed && this._actionPerformed.indexOf(objectId) !== -1 &&
+          actionName === this.config.actions.unAssign.name) {
+          this._actionPerformed.splice(this._actionPerformed.indexOf(objectId), 1);
+          this._selectedAsset = null;
+        } else if (actionName === this.config.actions.unAssign.name) {
+          this._selectedAsset = null;
+        }
       }
       this.emit("updateActionsInDetails", this._actionPerformed);
       //update my assets
