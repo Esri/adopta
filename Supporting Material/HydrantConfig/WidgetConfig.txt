@@ -1,0 +1,119 @@
+
+{
+  "assetLayerDetails": {
+    "url": "http://services2.arcgis.com/PWJUSsdoJDp7SgLj/arcgis/rest/services/AdoptAHydrant/FeatureServer/0",
+    "geometryType": "point",
+    "id": "AdoptAHydrant_8026"
+  },
+  "foreignKeyFieldForUserTable": "RelateGUID",
+  "authGPServiceURL": "http://surfacebkmiller.esri.com:6080/arcgis/rest/services/AuthGP/GPServer/AuthGP",
+  "nickNameField": "Nickname",
+  "showReverseGeocodedAddress": true,
+  "highlightColor": "#00ffff",
+  "loginHelpText": "<div style='text-align: center;font-size:15px;'>Already have an account?</div><br><div style='text-align: left;'>Please enter your email address and click submit to login and start adopting assets.</div><br><div style='text-align: center;font-size:15px;'>First time here?</div><div style='text-align: center;'><ol><li style='text-align: justify;'><span style='text-align: left;'>Please enter your email address and click submit to signup</span></li><li style='text-align: justify;'><span style='text-align: left;'>An email will be sent with a link to activate your account</span></li><li style='text-align: justify;'><span style='text-align: left;'>Please click the link in your email to verify your email address</span></li><li style='text-align: justify;'><span style='text-align: left;'>Once your email is verified, you can proceed to login by entering your email address only.</span><span style='text-align: center;'>No password is required to login</span></li></ol></ol></div>",
+  "additionalLoginParameters": [
+    {
+      "field": "FIRSTNAME",
+      "placeHolderText": "First Name",
+      "required": true,
+      "length": 50
+    },
+    {
+      "field": "LASTNAME",
+      "placeHolderText": "Last Name",
+      "required": false,
+      "length": 50
+    }
+  ],
+  "actions": {
+    "assign": {
+      "name": "Adopt",
+      "assignLabel": "Adopt Me",
+      "assignedLabel": "Adopted",
+      "urlParameterLabel": "assign",
+      "fieldsToUpdate": [
+        {
+          "field": "Assetstatus",
+          "action": "SetValue",
+          "value": "Adopted"
+        },
+        {
+          "field": "Adopteddate",
+          "action": "SetDate"
+        },
+        {
+          "field": "Laststatusupdate",
+          "action": "SetDate"
+        }
+      ]
+    },
+    "unAssign": {
+      "name": "Abandon",
+      "urlParameterLabel": "unassign",
+      "displayInMyAssets": false,
+      "fieldsToUpdate": [
+        {
+          "field": "Assetstatus",
+          "action": "SetValue",
+          "value": "Available"
+        },
+        {
+          "field": "Adopteddate",
+          "action": "Clear"
+        },
+        {
+          "field": "Laststatusupdate",
+          "action": "SetDate"
+        }
+      ]
+    },
+    "additionalActions": [
+      {
+        "name": "Shoveled",
+        "urlParameterLabel": "shovel",
+        "displayInMyAssets": true,
+        "fieldsToUpdate": [
+          {
+            "field": "Lastcleaneddate",
+            "action": "SetDate"
+          }
+        ]
+      },
+      {
+        "name": "Unable to get to it",
+        "urlParameterLabel": "unable",
+        "displayInMyAssets": true,
+        "fieldsToUpdate": [
+           {
+          "field": "Assetstatus",
+          "action": "SetValue",
+          "value": "Unable"
+        }
+        ]
+      }
+    ]
+  },
+  "myAssetSymbol": {
+    "angle": 0,
+    "xoffset": 0,
+    "yoffset": 0,
+    "type": "esriPMS",
+    "url": "",
+    "imageData": "iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAYAAACpSkzOAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAYdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuOWwzfk4AAAQCSURBVEhLrVZdbBRlFC3ELa1NEQMxDZgSG6IkPEiEdreWLY2KrRREFCRBHvCBlJAmxgeND0Ye9EUN+kIV/El4oQbBGhMSsSgYY1obDVUCpS1ud1vqUlptO7sz+zezczz3m4F2+re0epPzsPPde87cuT/f5uUyAIuJMtu2dxANxEEXB4h6npW6rgszkhQTW4kOI2kZoYGE+duVGNo6xxUudcUQHkyYyZRl0KeVCBKFbnhu4xsuItZms9mLY1omc+TEDfj3duHBp8MoqhqCr+KmQnFwCKV1YVTtu4oTXw9BT1gJCp0lVrpUcxsdd5hWdrjl+2Gs29lL0ih8lTEiPgt4Vn4Dlft6cb59FHzBPnIEXLrpJpmISEw3U4ebBlDg73dISFa8OY6dryXRctHEqGYjbtj4ts3EtleTKKqeECzwh9D0RRTpTHaEXNUutdfkc0kmr38QwZKAZOEQ3BuM46PTGWRMekyxZBp461ga+Y/fFqN/ZT+ONkdhWdlBiq1y6R3jg2KpyZfnbmGJP3InSFD2nA5Nt13q6XZzxJ6UlYP7gyH8+OsYyHuSLj5XRgltHWXhH97eTceJepRu19H4XsphnMP2vpnE8qf0O3G+wDge3dWFVDorDbJOidBvMX90vHOMNVGFn3iz3W8kHaa7sPUvGZ5YX/kAPv8qKlmd4vEiESpjAxgb91ylg7e7/pMQuZ5t7JHGiPC4RLXztZBuPvBE3xRHB2t3Gw7THLa0Znqc4KFnrrNLMzo1KkSoof13Dfl+DuIMzo/syi0k7T9TbH5FBLf+TlPCrhWhg22dGuvDqZ/k1Ph+CufaLfzUabl0s1trh6V8ZdYmc/jKKfRPWupU5wgxI5/fK9TE2ZmvvXIk5eGYKnTglz80z5AK/g+hQn9YPl2WGltEqL4nrJslT4Y8Th82Z7gobRh30XjiJzj0rldozbbrGI+ZGl02SHuXanHTWP/CZR5OX54Lb4YY6g91SXv30WWFGlpm1drU/JfawlMDFiy0sQ9nvhuW+hxXImL8EWRWicde7KGTN6sFCQXGsHl/t6wgjdyrXRklVMiKnf3mhxEUVHhrNX+hGJZX9+DnS+OSzSc8vseVcYwPV8qldfhoRK16CZr/Uo1haVUIn56Ogi9+hUfLXHqvUSwgl9bbH/dj2aY/cV+NhjXP64SRAzqKNo2pTETEsuxecjlbezajQzUvwMELHaNq1csWnqkbJ8AzFr7m5W7IPEomOUVuGx1XESflPvnsTBS1DdfUgpTdJdMukGGUOZEWbjk/whtYFV5qMvPnms0Y4JM3I06l0laEWzguC1JWigInXoZR5oQ+x4nVjPEWfj7GYPn7VUKicqKWqHOxhc83EM4wzml5ef8CnVih0TZlcSQAAAAASUVORK5CYII=",
+    "contentType": "image/png",
+    "width": 30,
+    "height": 30
+  },
+  "toleranceSettings": {
+    "distance": 10,
+    "distanceUnits": 9001,
+    "distanceSettings": {
+      "miles": 9035,
+      "kilometers": 9036,
+      "feet": 9002,
+      "meters": 9001,
+      "yards": 9037,
+      "nauticalMiles": 9030
+    }
+  }
+}
