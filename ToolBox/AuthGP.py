@@ -384,7 +384,7 @@ def checkFieldCase(fields):
                 fldFound = True
                 
                 if db_field.name != field:
-                    fields[db_field.name] = in_fields[field]
+                    fields[db_field.name] = fields[field]
                     del fields[field]
         if fldFound == False:
             del fields[field]
@@ -889,5 +889,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
