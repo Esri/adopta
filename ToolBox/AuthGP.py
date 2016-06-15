@@ -136,6 +136,10 @@ def validate_user_table():
     # this check is not required on server after publishing as gp service
     if arcpy.ProductInfo() == "ArcServer":
         return True
+    if not arcpy.Exists(user_table):
+        send_msg("User table does not exist", "error")
+        return False
+
     desc = arcpy.Describe(user_table)
     # check if user table has globalid enabled
     if not desc.hasGlobalID:
@@ -196,10 +200,11 @@ def email_exists(input_email, check_token_validity=False):
     where_clause = "UPPER({0})='{1}'".format(user_email_field, input_email.upper())
     rowcount = 0
     try:
+        send_msg("user table {0}".format(user_table), "message")
         with arcpy.da.SearchCursor(in_table=user_table,
                                    field_names=[user_email_field, token_date_field],
                                    where_clause=where_clause) as cursor:
-
+            send_msg("curose created {0}".format(user_table), "message")
             rowcount = len([i for i in cursor])
 
             # return true in signup case
@@ -351,14 +356,14 @@ def validate_newuser_signupfields():
 
     # validate if fields exist in the database
     desc = arcpy.Describe(user_table)
-    db_fields = [f.name for f in desc.fields]
+    db_fields = [f.name for f in arcpy.ListFields(user_table)]
     for field in dict(in_fields):
         if field not in db_fields:
             # remove the field from list of in_fields
             del in_fields[field]
         else:
             # check length of field against input values
-            db_length = [f.length for f in desc.fields if f.name == field][0]
+            db_length = [f.length for f in arcpy.ListFields(user_table) if f.name == field][0]
             if len(in_fields[field]) > db_length:
                 # remove if field length is smaller than input values
                 del in_fields[field]
@@ -378,9 +383,10 @@ def add_user():
 
     # check email field length
     try:
-        table_fields = arcpy.Describe(user_table).fields
+        table_fields = arcpy.ListFields(user_table)
+        #table_fields = arcpy.Describe(user_table).fields
         email_field = []
-        email_field = [field for field in table_fields if field.name == user_email_field]
+        email_field = [field for field in table_fields if field.name.upper() == user_email_field.upper()]
         if len(email_field) == 0:
             raise Exception("Could not find email field in user table")
         if len(input_user_email) > email_field[0].length:
@@ -762,7 +768,7 @@ def return_unique_teamnames():
     if len(user_team_field) > 0:
         try:
             desc = arcpy.Describe(user_table)
-            field_info = [f for f in desc.fields if f.name == user_team_field][0]
+            field_info = [f for f in arcpy.ListFields(user_table) if f.name == user_team_field][0]
             # generate team field properties info
             team_result["teamfield"] = {"name":str(field_info.name),
                                         "type": str(field_info.type),
