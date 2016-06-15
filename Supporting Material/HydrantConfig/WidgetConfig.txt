@@ -6,7 +6,7 @@
     "id": "AdoptAHydrant_8026"
   },
   "foreignKeyFieldForUserTable": "RelateGUID",
-  "authGPServiceURL": "http://surfacebkmiller.esri.com:6080/arcgis/rest/services/AuthGP/GPServer/AuthGP",
+  "authGPServiceURL": "http://utilsolutions.esri.com/arcgis/rest/services/SocialShoveling/GPServer/SocialShoveling",
   "nickNameField": "Nickname",
   "showReverseGeocodedAddress": true,
   "highlightColor": "#00ffff",

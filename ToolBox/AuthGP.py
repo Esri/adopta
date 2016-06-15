@@ -102,7 +102,7 @@ smtp_server = arcpy.GetParameterAsText(18)
 smtp_username = arcpy.GetParameterAsText(19)
 smtp_password = arcpy.GetParameterAsText(20)
 use_tls = arcpy.GetParameterAsText(21)
-signup_fields = '{"FIRSTName":"value", "TEAMNAME":"value"}' #arcpy.GetParameterAsText(22)
+signup_fields = arcpy.GetParameterAsText(22)
 asset_popup_config = arcpy.GetParameterAsText(23)
 widget_config = arcpy.GetParameterAsText(24)
 adopted_assetid = arcpy.GetParameterAsText(25)
@@ -786,8 +786,11 @@ def return_unique_teamnames():
     # if team field configured, send unique names
     if len(user_team_field) > 0:
         try:
-            desc = arcpy.Describe(user_table)
-            field_info = [f for f in arcpy.ListFields(user_table) if f.name == user_team_field][0]
+            #desc = arcpy.Describe(user_table)
+            field_info = [f for f in arcpy.ListFields(user_table) if f.name.upper() == user_team_field.upper()]
+            if len(field_info) == 0:
+                return
+            field_info = field_info[0]
             # generate team field properties info
             team_result["teamfield"] = {"name":str(field_info.name),
                                         "type": str(field_info.type),
