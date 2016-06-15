@@ -65,7 +65,8 @@ from re import findall, match
 from re import IGNORECASE
 from json import loads
 from uuid import uuid4
-from datetime import datetime
+
+import datetime
 from datetime import timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -101,7 +102,7 @@ smtp_server = arcpy.GetParameterAsText(18)
 smtp_username = arcpy.GetParameterAsText(19)
 smtp_password = arcpy.GetParameterAsText(20)
 use_tls = arcpy.GetParameterAsText(21)
-signup_fields = arcpy.GetParameterAsText(22)
+signup_fields = '{"FIRSTName":"value", "TEAMNAME":"value"}' #arcpy.GetParameterAsText(22)
 asset_popup_config = arcpy.GetParameterAsText(23)
 widget_config = arcpy.GetParameterAsText(24)
 adopted_assetid = arcpy.GetParameterAsText(25)
@@ -228,7 +229,7 @@ def email_exists(input_email, check_token_validity=False):
                     token_time = row[1]
                     if token_time in [None, ""]:
                         raise Exception("No token date recorded to verify validity.")
-                    delta = datetime.utcnow() - token_time
+                    delta = datetime.datetime.utcnow() - token_time
                     validity = timedelta(minutes=int(token_expiry_minutes))
                     isvalid = delta < validity
                     if isvalid or int(token_expiry_minutes) == 0:
@@ -272,7 +273,7 @@ def validate_url_token():
                     token_time = row[1]
                     if token_time in [None, ""]:
                         raise Exception("No token date recorded to verify validity.")
-                    delta = datetime.utcnow() - token_time
+                    delta = datetime.datetime.utcnow() - token_time
                     validity = timedelta(minutes=int(token_expiry_minutes))
                     isvalid = delta < validity
                     if isvalid or int(token_expiry_minutes) == 0:
@@ -324,7 +325,7 @@ def update_usertoken(expired_email=""):
                 # add new guid
                 row[0] = "{"+str(uuid4())+"}"
                 # record current time
-                row[1] = datetime.utcnow()
+                row[1] = datetime.datetime.utcnow()
                 cursor.updateRow(row)
 
         send_msg("User: {0} token regenerated".format(email_address))
@@ -355,22 +356,40 @@ def validate_newuser_signupfields():
         return in_fields
 
     # validate if fields exist in the database
-    desc = arcpy.Describe(user_table)
-    db_fields = [f.name for f in arcpy.ListFields(user_table)]
+    db_fields = arcpy.ListFields(user_table)
     for field in dict(in_fields):
-        if field not in db_fields:
-            # remove the field from list of in_fields
+        fldFound = False
+        for db_field in db_fields:
+            if db_field.name.upper() == field.upper():
+                fldFound = True
+                db_length = db_field.length
+                if len(in_fields[field]) > db_length:
+                    # remove if field length is smaller than input values
+                    in_fields[field] = in_fields[field][:db_field.length]
+                if db_field.name != field:
+                    in_fields[db_field.name] = in_fields[field]
+                    del in_fields[field]
+        if fldFound == False:
             del in_fields[field]
-        else:
-            # check length of field against input values
-            db_length = [f.length for f in arcpy.ListFields(user_table) if f.name == field][0]
-            if len(in_fields[field]) > db_length:
-                # remove if field length is smaller than input values
-                del in_fields[field]
+                
 
     send_msg(in_fields)
     return in_fields
-
+def checkFieldCase(fields):
+    db_fields = arcpy.ListFields(user_table)
+    for field in fields:
+        fldFound = False
+        for db_field in db_fields:
+            if db_field.name.upper() == field.upper():
+                fldFound = True
+                
+                if db_field.name != field:
+                    fields[db_field.name] = in_fields[field]
+                    del fields[field]
+        if fldFound == False:
+            del fields[field]
+    return fields
+    
 def add_user():
     """ adds user to geodatabase using email and signup fields """
     fields = validate_newuser_signupfields()
@@ -379,8 +398,8 @@ def add_user():
     # add token field and generate a new guid
     fields.update({user_token_field: "{"+str(uuid4())+"}"})
     # add current time when token was generated
-    fields.update({token_date_field:datetime.utcnow()})
-
+    fields.update({token_date_field:datetime.datetime.utcnow()})
+    fields = checkFieldCase(fields=fields)
     # check email field length
     try:
         table_fields = arcpy.ListFields(user_table)
