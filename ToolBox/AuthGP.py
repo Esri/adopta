@@ -779,6 +779,7 @@ def return_unique_teamnames():
     # out message format
     team_result = {"teamfield":{}, "features":[]}
     # if no team field configured, send empty response
+    
     if len(user_team_field) == 0:
         team_result["teamfield"] = None
         send_msg(team_result, "success")
@@ -788,7 +789,9 @@ def return_unique_teamnames():
         try:
             #desc = arcpy.Describe(user_table)
             field_info = [f for f in arcpy.ListFields(user_table) if f.name.upper() == user_team_field.upper()]
+            
             if len(field_info) == 0:
+                send_msg(team_result, "success")
                 return
             field_info = field_info[0]
             # generate team field properties info
@@ -799,16 +802,18 @@ def return_unique_teamnames():
                                         "nullable": str(field_info.isNullable),
                                         "default": str(field_info.defaultValue)
                                        }
+            
             # find unique names in team field
             rowcount = 0
-            with arcpy.da.SearchCursor(in_table=user_table, field_names=user_team_field,
+            with arcpy.da.SearchCursor(in_table=user_table, field_names=field_info.name,
                                        sql_clause=["DISTINCT", None]) as cursor:
 
                 rowcount = len([i for i in cursor])
+               
                 if rowcount == 0:
                     team_result["features"] = []
-                    send_msg(team_result, "success")
-                if rowcount > 0:
+                   
+                elif rowcount > 0:
                     # reset cursor
                     cursor.reset()
                     for row in cursor:
@@ -866,16 +871,18 @@ def validate_inputs():
 
 def main():
     """ main function """
+    
     # validate inputs for actions
     if not validate_inputs():
         return
-
+    
     # validate user table schema
     if not validate_user_table():
         return
-
+    
     # return unique team names
     if action.lower() == "teams":
+        
         return_unique_teamnames()
 
     # validate if user exists and token is valid
