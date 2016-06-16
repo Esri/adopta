@@ -71,9 +71,6 @@ from datetime import timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from smtplib import SMTP
-from arcrest.security import AGOLTokenSecurityHandler
-from arcrest.security import PortalTokenSecurityHandler
-from arcrest.agol import FeatureLayer
 import arcpy
 #------------------------------------------------------------------------------#
 
@@ -157,6 +154,8 @@ def validate_user_table():
 def initialize_securityhandler(url, username, password):
     """ initialize AGOL/Portal security handler """
     try:
+        from arcrest.security import AGOLTokenSecurityHandler
+        from arcrest.security import PortalTokenSecurityHandler        
         # if user has provided credentials
         if len(username) > 0 and len(password) > 0:
             # check if its AGOL or Portal
@@ -175,6 +174,7 @@ def initialize_securityhandler(url, username, password):
 def initialize_featurelayer(layer_url, agol_sh):
     """ used to initialize the asset feature layer and user table """
     try:
+        from arcrest.agol import FeatureLayer
         feature_layer = FeatureLayer(
             url=layer_url,
             securityHandler=agol_sh,
@@ -205,7 +205,7 @@ def email_exists(input_email, check_token_validity=False):
         with arcpy.da.SearchCursor(in_table=user_table,
                                    field_names=[user_email_field, token_date_field],
                                    where_clause=where_clause) as cursor:
-            send_msg("curose created {0}".format(user_table), "message")
+            send_msg("cursor created {0}".format(user_table), "message")
             rowcount = len([i for i in cursor])
 
             # return true in signup case
@@ -706,6 +706,7 @@ def send_email(email_body, email_address):
         return False
 
 def process_signup():
+    
     """ process signup operation """
     email_status = email_exists(input_email=input_user_email, check_token_validity=False)
     if email_status is True:
