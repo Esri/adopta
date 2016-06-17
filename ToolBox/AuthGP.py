@@ -105,6 +105,55 @@ widget_config = arcpy.GetParameterAsText(24)
 adopted_assetid = arcpy.GetParameterAsText(25)
 url_userid = arcpy.GetParameterAsText(26)
 url_usertoken = arcpy.GetParameterAsText(27)
+
+########################################################################
+class fieldRelace():
+    _name = ""
+    _length = 0    
+    def __init__(self,name, length = 0, **kwargs):
+        self._name = name
+        self._length = length
+        
+    @property
+    def name(self):
+        return self._name        
+    @property
+    def length(self):
+        return self._length               
+class describeReplace():
+    _hasGlobalID = True
+    _globalIdField = "GlobalID"
+    _isVersioned = False
+    _path = ""
+    _fields = []
+    def __init__(self):
+        
+        import os
+        self._path, name = os.path.split(user_table)
+        self._fields.append(fieldRelace(**{"name":'OBJECTID',"length":"4"}))
+        self._fields.append(fieldRelace(**{"name":'EMAIL',"length":"70"}))
+        self._fields.append(fieldRelace(**{"name":'TEAM',"length":"35"}))
+        self._fields.append(fieldRelace(**{"name":'FIRSTNAME',"length":"35"}))
+        self._fields.append(fieldRelace(**{"name":'LASTNAME',"length":"35"}))
+        self._fields.append(fieldRelace(**{"name":'GlobalID',"length":"0"}))
+        self._fields.append(fieldRelace(**{"name":'USERTOKEN',"length":"0"}))
+        self._fields.append(fieldRelace(**{"name":'TOKENDATE',"length":"0"}))
+
+    @property
+    def hasGlobalID(self):
+        return self._hasGlobalID    
+    @property
+    def globalIDFieldName(self):
+        return self._globalIdField
+    @property
+    def isVersioned(self):
+        return self._isVersioned
+    @property
+    def path(self):
+        return self._path    
+    @property
+    def fields(self):
+        return self._fields     
 def send_msg(message, messagetype="message",):
     """ output messages to stdout as well as arcpy """
     if messagetype.lower() == "message":
@@ -133,20 +182,28 @@ def validate_user_table(userTableDescribe):
     # this check is not required on server after publishing as gp service
     if arcpy.ProductInfo() == "ArcServer":
         return True
-    if not arcpy.Exists(user_table):
-        send_msg("User table does not exist", "error")
-        return False
+    #Commented out to shave .05 seconds off
+    #if not arcpy.Exists(user_table):
+        #send_msg("User table does not exist", "error")
+        #return False
     # check if user table has globalid enabled
     if not userTableDescribe.hasGlobalID:
         send_msg("User table does not have globalids enabled.", "error")
         return False
-    # check if user table is an enterprise gdb
-    workspace_props = arcpy.Describe(userTableDescribe.path)
-    if workspace_props.workspaceFactoryProgID == "esriDataSourcesGDB.SdeWorkspaceFactory.1":
+   
+    upperPath = userTableDescribe.path.upper()
+    if ('.SDE' in upperPath or '.GDS' in upperPath):
         return True
-    else:
-        send_msg("User table must be sourced from an enterprise geodatabase", "error")
-        return False
+    return False
+
+    #Commented out to save .1 seconds
+    # check if user table is an enterprise gdb
+    #workspace_props = arcpy.Describe(userTableDescribe.path)
+    #if workspace_props.workspaceFactoryProgID == "esriDataSourcesGDB.SdeWorkspaceFactory.1":
+        #return True
+    #else:
+        #send_msg("User table must be sourced from an enterprise geodatabase", "error")
+        #return False
 
 def initialize_securityhandler(url, username, password):
     """ initialize AGOL/Portal security handler """
@@ -198,13 +255,12 @@ def email_exists(userTableDescribe, input_email, check_token_validity=False):
     where_clause = "UPPER({0})='{1}'".format(user_email_field, input_email.upper())
     rowcount = 0
     try:
-        
         with arcpy.da.SearchCursor(in_table=user_table,
                                    field_names=[user_email_field, token_date_field],
                                    where_clause=where_clause) as cursor:
             
-            rowcount = len([i for i in cursor])
-
+            rows = [i for i in cursor]
+            rowcount = len(rows)
             # return true in signup case
             if check_token_validity is False:
                 #pylint: disable=R0102
@@ -220,23 +276,21 @@ def email_exists(userTableDescribe, input_email, check_token_validity=False):
                 if rowcount != 1:
                     # user does not exist
                     return False
-                # reset cursor back to first row
-                cursor.reset()
-                for row in cursor:
-                    token_time = row[1]
-                    if token_time in [None, ""]:
-                        raise Exception("No token date recorded to verify validity.")
-                    delta = datetime.datetime.utcnow() - token_time
-                    validity = timedelta(minutes=int(token_expiry_minutes))
-                    isvalid = delta < validity
-                    if isvalid or int(token_expiry_minutes) == 0:
-                        # if expiration is set to 0  minutes, tokens never expire
-                        return True
-                    else:
-                        # update token and send login email
-                        update_usertoken(userTableDescribe,expired_email=input_email)
-                        process_login(userTableDescribe, email_address=row[0])
-                        send_msg("Regenerated usertoken")
+             
+                token_time = rows[0][1]
+                if token_time in [None, ""]:
+                    raise Exception("No token date recorded to verify validity.")
+                delta = datetime.datetime.utcnow() - token_time
+                validity = timedelta(minutes=int(token_expiry_minutes))
+                isvalid = delta < validity
+                if isvalid or int(token_expiry_minutes) == 0:
+                    # if expiration is set to 0  minutes, tokens never expire
+                    return True
+                else:
+                    # update token and send login email
+                    update_usertoken(userTableDescribe,expired_email=input_email)
+                    process_login(userTableDescribe, email_address=rows[0][0])
+                    send_msg("Regenerated usertoken")
 
     except Exception as e:
         send_msg("Error occurred while verifying if email exists. Error: {0}".format(str(e)),
@@ -258,33 +312,31 @@ def validate_url_token(userTableDescribe):
         with arcpy.da.SearchCursor(in_table=user_table,
                                    field_names=[user_email_field, token_date_field],
                                    where_clause=where_clause) as cursor:
-
-            rowcount = len([i for i in cursor])
+            rows = [i for i in cursor]
+            rowcount = len(rows)
             if rowcount == 0:
                 send_msg("Userid and usertoken do not match.", "error")
                 return
             elif rowcount == 1:
-                # reset cursor back to first row
-                cursor.reset()
-                for row in cursor:
-                    token_time = row[1]
-                    if token_time in [None, ""]:
-                        raise Exception("No token date recorded to verify validity.")
-                    delta = datetime.datetime.utcnow() - token_time
-                    validity = timedelta(minutes=int(token_expiry_minutes))
-                    isvalid = delta < validity
-                    if isvalid or int(token_expiry_minutes) == 0:
-                        # return email address
-                        # if expiration is set to 0  minutes, tokens never expire
-                        emailid = {"email":str(row[0])}
-                        send_msg(emailid, "success")
-                        return True
-                    else:
-                        # update token
-                        update_usertoken(userTableDescribe, expired_email=str(row[0]))
-                        send_msg("Updating token for {0}".format(row[0]))
-                        process_login(userTableDescribe, email_address=str(row[0]))
-                        send_msg("Regenerated usertoken", "success")
+               
+                token_time = rows[0][1]
+                if token_time in [None, ""]:
+                    raise Exception("No token date recorded to verify validity.")
+                delta = datetime.datetime.utcnow() - token_time
+                validity = timedelta(minutes=int(token_expiry_minutes))
+                isvalid = delta < validity
+                if isvalid or int(token_expiry_minutes) == 0:
+                    # return email address
+                    # if expiration is set to 0  minutes, tokens never expire
+                    emailid = {"email":str(rows[0][0])}
+                    send_msg(emailid, "success")
+                    return True
+                else:
+                    # update token
+                    update_usertoken(userTableDescribe, expired_email=str(rows[0][0]))
+                    send_msg("Updating token for {0}".format(rows[0][0]))
+                    process_login(userTableDescribe, email_address=str(rows[0][0]))
+                    send_msg("Regenerated usertoken", "success")
             else:
                 send_msg("Duplicate users in user table", "error")
 
@@ -338,8 +390,9 @@ def update_usertoken(userTableDescribe, expired_email=""):
     except Exception as e:
         send_msg("Error occurred while regenerating usertoken. Error: {0}".format(str(e)),
                  "error")
-        if edit.isEditing:
-            edit.stopEditing(False)
+        if edit:
+            if edit.isEditing:
+                edit.stopEditing(False)
         return None, None
 
 def validate_newuser_signupfields(userTableDescribe):
@@ -447,9 +500,10 @@ def add_user(userTableDescribe):
     except Exception as e:
         send_msg("Error occurred while adding user to geodatabase. Error: {0}".format(str(e)),
                  "error")
-        if edit.isEditing:
-            edit.stopOperation()
-            edit.stopEditing(False)
+        if edit.isEditing:        
+            if edit.isEditing:
+                edit.stopOperation()
+                edit.stopEditing(False)
         return None, None
 
 def get_base_appurl():
@@ -806,18 +860,10 @@ def return_unique_teamnames(userTableDescribe):
             with arcpy.da.SearchCursor(in_table=user_table, field_names=field_info.name,
                                        sql_clause=["DISTINCT", None]) as cursor:
 
-                rowcount = len([i for i in cursor])
-               
-                if rowcount == 0:
-                    team_result["features"] = []
-                   
-                elif rowcount > 0:
-                    # reset cursor
-                    cursor.reset()
-                    for row in cursor:
-                        if row[0] is not None:
-                            team_result["features"].append(
-                                {"attributes":{str(user_team_field): str(row[0])}})
+                for row in cursor:
+                    if row[0] is not None:
+                        team_result["features"].append(
+                            {"attributes":{str(user_team_field): str(row[0])}})
 
                 # return team result
                 send_msg(team_result, "success")
@@ -826,9 +872,10 @@ def return_unique_teamnames(userTableDescribe):
 
 def validate_inputs():
     """ validate input parameters """
-    if not arcpy.Exists(user_table):
-        send_msg("Could not connect to user table at {0}".format(str(user_table)), "error")
-        return False
+    #Commented out to shave .05 seconds off
+    #if not arcpy.Exists(user_table):
+        #send_msg("Could not connect to user table at {0}".format(str(user_table)), "error")
+        #return False
 
     if action.lower() in ["signup", "login"]:
         if len(input_user_email) == 0:
@@ -869,17 +916,15 @@ def validate_inputs():
 
 def main():
     """ main function """
- 
+    #userTableDescribe = describeReplace()#arcpy.Describe(user_table)    
     userTableDescribe = arcpy.Describe(user_table)    
     
     # validate inputs for actions
     if not validate_inputs():
         return
-    
     # validate user table schema
     if not validate_user_table(userTableDescribe):
         return
-    
     # return unique team names
     if action.lower() == "teams":
         
@@ -895,8 +940,7 @@ def main():
 
     if action.lower() == "login":
         process_login(userTableDescribe, email_address=input_user_email)
-    
+        
 if __name__ == '__main__':
     main()
-
 
