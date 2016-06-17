@@ -18,7 +18,8 @@
   'dojo/Deferred',
   'dojo/string',
   'jimu/utils',
-  'dojo/query'
+  'dojo/query',
+  "esri/graphic"
 ], function (
   declare,
   array,
@@ -39,7 +40,8 @@
   Deferred,
   string,
   jimuUtils,
-  dojoQuery
+  dojoQuery,
+  Graphic
 ) {
   return declare([BaseWidget, _WidgetsInTemplateMixin, Evented], {
 
@@ -331,10 +333,10 @@
     * @param {boolean} flag to decide the visibility of details panel
     * @memberOf widgets/Adopta/AssetDetails
     */
-    _updateFeatureDetails: function(selectedFeature, actionName, showAssetDetails,
+    _updateFeatureDetails: function (selectedFeature, actionName, showAssetDetails,
      updatedAttributes) {
-      var isNewAssetAdopted, adoptionCompleteMsg, updatedFeatureAttributes = {},
-      showMesssage = true;
+      var isNewAssetAdopted, adoptionCompleteMsg, showMesssage = true;
+
       //if action is adoopted it means new asset is addopted
       if (actionName === this.config.actions.assign.name) {
         isNewAssetAdopted = true;
@@ -351,73 +353,79 @@
       updatedAttributes[this.layer.objectIdField] =
         selectedFeature.attributes[this.layer.objectIdField];
       //pass all the updated values to desired object
-      updatedFeatureAttributes.attributes = updatedAttributes;
+
       this.loading.show();
       adoptionCompleteMsg = string.substitute(this.nls.adoptionCompleteMsg, {
         'assetTitle': this._getAssetTitle(selectedFeature)
       });
-      this.layer.applyEdits(null, [updatedFeatureAttributes], null, lang.hitch(this,
-        function (added, updated, deleted) {
-          /*jshint unused: false*/
-          if (updated[0].success) {
-            //update action performed array to show green check symbol for primary action
-            this._updateActionPerformedArray(actionName, selectedFeature);
-            //Refresh layer and show the updated information in asset details panel
-            this.layer.refresh();
-            if (showAssetDetails) {
-              this.showAssetInfoPopup(selectedFeature);
-            } else {
-              this.emit("showMyAssets", selectedFeature);
-            }
-            if (isNewAssetAdopted) {
-              this.emit("showMessage", adoptionCompleteMsg);
-              //If asset is adopted, increment the count of total number of adopted asset by logged in user
-              this.emit("assetAdopted", selectedFeature.attributes[this.layer.objectIdField]);
-            } else {
-              this.emit("actionPerformed", actionName,
-                selectedFeature.attributes[this.layer.objectIdField]);
-              if (actionName === this.config.actions.unAssign.name) {
-                this.emit("showMessage", string.substitute(this.nls.abandonCompleteMsg,
-                  { assetTitle: this._getAssetTitle(selectedFeature), actionName: actionName }));
-                if (selectedFeature.symbol) {
-                  selectedFeature.symbol = null;
-                }
-                //if action is unAssign update the highlight symbol
-                this.emit("highlightFeatureOnMap", selectedFeature);
+      var arr = [];
+      var updatedFeatureAttributes = new Graphic(null, null, updatedAttributes, null);
+      arr.push(updatedFeatureAttributes);
+
+      this.layer.applyEdits(null, arr, null,
+          lang.hitch(this, function (added, updated, deleted) {
+            /*jshint unused: false*/
+            if (updated[0].success) {
+              //update action performed array to show green check symbol for primary action
+              this._updateActionPerformedArray(actionName, selectedFeature);
+              //Refresh layer and show the updated information in asset details panel
+              this.layer.refresh();
+              if (showAssetDetails) {
+                this.showAssetInfoPopup(selectedFeature);
               } else {
-                //Check if action name exsist, if not we assume user has updated assset's nickname
-                if ((this.primaryAction && this.primaryAction.name === actionName) ||
-                  !actionName) {
-                  showMesssage = false;
-                }
-                if (showMesssage) {
-                  this.emit("showMessage", string.substitute(this.nls.actionCompleteMsg,
-                    { actionName: actionName }));
+                this.emit("showMyAssets", selectedFeature);
+              }
+              if (isNewAssetAdopted) {
+                this.emit("showMessage", adoptionCompleteMsg);
+                //If asset is adopted, increment the count of total number of adopted asset by logged in user
+                this.emit("assetAdopted", selectedFeature.attributes[this.layer.objectIdField]);
+              } else {
+                this.emit("actionPerformed", actionName,
+                  selectedFeature.attributes[this.layer.objectIdField]);
+                if (actionName === this.config.actions.unAssign.name) {
+                  this.emit("showMessage", string.substitute(this.nls.abandonCompleteMsg,
+                    { assetTitle: this._getAssetTitle(selectedFeature), actionName: actionName }));
+                  if (selectedFeature.symbol) {
+                    selectedFeature.symbol = null;
+                  }
+                  //if action is unAssign update the highlight symbol
+                  this.emit("highlightFeatureOnMap", selectedFeature);
+                } else {
+                  //Check if action name exsist, if not we assume user has updated assset's nickname
+                  if ((this.primaryAction && this.primaryAction.name === actionName) ||
+                    !actionName) {
+                    showMesssage = false;
+                  }
+                  if (showMesssage) {
+                    this.emit("showMessage", string.substitute(this.nls.actionCompleteMsg,
+                      { 'actionName': actionName }));
+                  }
                 }
               }
+            } else {
+              //if action is adoopted it means new asset is addopted
+              if (actionName === this.config.actions.assign.name) {
+                //Show error if adoption fails
+                this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
+              } else {
+                this.emit("showMessage", string.substitute(this.nls.actionFailedMsg,
+                  { 'actionName': actionName }));
+              }
             }
-          } else {
+            this.loading.hide();
+          }),
+          lang.hitch(this, function (error) {
             //if action is adoopted it means new asset is addopted
             if (actionName === this.config.actions.assign.name) {
               //Show error if adoption fails
               this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
             } else {
               this.emit("showMessage", string.substitute(this.nls.actionFailedMsg,
-                { actionName: actionName }));
+                { 'actionName': actionName }));
             }
-          }
-          this.loading.hide();
-        }), lang.hitch(this, function () {
-          //if action is adoopted it means new asset is addopted
-          if (actionName === this.config.actions.assign.name) {
-            //Show error if adoption fails
-            this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
-          } else {
-            this.emit("showMessage", string.substitute(this.nls.actionFailedMsg,
-              { actionName: actionName }));
-          }
-          this.loading.hide();
-        }));
+            this.loading.hide();
+          })
+        );
     },
 
     /**
@@ -455,18 +463,18 @@
       array.forEach(fieldsToUpdate, lang.hitch(this,
         function (currentAction) {
           switch (currentAction.action) {
-          case "SetValue":
-            selectedFeature.attributes[currentAction.field] = currentAction.value;
-            updatedAttributes[currentAction.field] = currentAction.value;
-            break;
-          case "SetDate":
-            selectedFeature.attributes[currentAction.field] = Date.now();
-            updatedAttributes[currentAction.field] = Date.now();
-            break;
-          case "Clear":
-            selectedFeature.attributes[currentAction.field] = null;
-            updatedAttributes[currentAction.field] = null;
-            break;
+            case "SetValue":
+              selectedFeature.attributes[currentAction.field] = currentAction.value;
+              updatedAttributes[currentAction.field] = currentAction.value;
+              break;
+            case "SetDate":
+              selectedFeature.attributes[currentAction.field] = Date.now();
+              updatedAttributes[currentAction.field] = Date.now();
+              break;
+            case "Clear":
+              selectedFeature.attributes[currentAction.field] = null;
+              updatedAttributes[currentAction.field] = null;
+              break;
           }
         }));
       this._updateFeatureDetails(selectedFeature, actionName, showAssetDetails, updatedAttributes);
