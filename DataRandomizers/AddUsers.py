@@ -82,8 +82,8 @@ def main():
     asFields = "Assetstatus","RelateGUID","Adopteddate","Laststatusupdate","Lastcleaneddate","Nickname","Teamname"
     utFields = ['Email','Team','Firstname','Lastname']
     globalIDfield = ['GlobalID']
-    userTable = r"C:\_MyFiles\GitHub\AdoptA\DataRandomizers\RandomTest.gdb\User_table"
-    assetTable = r"C:\_MyFiles\GitHub\AdoptA\DataRandomizers\RandomTest.gdb\AssetLayer"
+    userTable = r"C:\Projects\Github\AdoptA\DataRandomizers\RandomTest.gdb\User_table"
+    assetTable = r"C:\Projects\Github\AdoptA\DataRandomizers\RandomTest.gdb\AssetLayer"
     numOfUsers = 2500
     teamBreak = 10
     assetPerUser = 2
@@ -107,7 +107,7 @@ def main():
             lastName = randomword(12)
             email= firstName[:1] + lastName + "@test.com"
             if teamIdx >= teamBreak:
-                teamName  = randomword(12) + " " + randomword(5) + " " + randomword(20)
+                teamName  = randomword(9) + " " + randomword(4) + " " + randomword(20)
                 teamIdx = 1
             oids.append(icursor.insertRow([email,teamName,firstName,lastName]))
             teamIdx = teamIdx + 1
