@@ -82,7 +82,7 @@
       {
         "name": "Unable to get to it",
         "urlParameterLabel": "unable",
-        "displayInMyAssets": true,
+        "displayInMyAssets": false,
         "fieldsToUpdate": [
            {
           "field": "Assetstatus",
