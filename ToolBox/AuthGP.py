@@ -107,10 +107,10 @@ url_userid = arcpy.GetParameterAsText(26)
 url_usertoken = arcpy.GetParameterAsText(27)
 
 ########################################################################
-class fieldRelace():
+class fieldReplace():
     _name = ""
     _length = 0    
-    def __init__(self,name, length = 0, **kwargs):
+    def __init__(self, name, length = 0, **kwargs):
         self._name = name
         self._length = length
         
@@ -130,14 +130,14 @@ class describeReplace():
         
         import os
         self._path, name = os.path.split(user_table)
-        self._fields.append(fieldRelace(**{"name":'OBJECTID',"length":"4"}))
-        self._fields.append(fieldRelace(**{"name":'EMAIL',"length":"70"}))
-        self._fields.append(fieldRelace(**{"name":'TEAM',"length":"35"}))
-        self._fields.append(fieldRelace(**{"name":'FIRSTNAME',"length":"35"}))
-        self._fields.append(fieldRelace(**{"name":'LASTNAME',"length":"35"}))
-        self._fields.append(fieldRelace(**{"name":'GlobalID',"length":"0"}))
-        self._fields.append(fieldRelace(**{"name":'USERTOKEN',"length":"0"}))
-        self._fields.append(fieldRelace(**{"name":'TOKENDATE',"length":"0"}))
+        self._fields.append(fieldReplace(**{"name":'OBJECTID',"length":"4"}))
+        self._fields.append(fieldReplace(**{"name":'EMAIL',"length":"70"}))
+        self._fields.append(fieldReplace(**{"name":'TEAM',"length":"35"}))
+        self._fields.append(fieldReplace(**{"name":'FIRSTNAME',"length":"35"}))
+        self._fields.append(fieldReplace(**{"name":'LASTNAME',"length":"35"}))
+        self._fields.append(fieldReplace(**{"name":'GlobalID',"length":"0"}))
+        self._fields.append(fieldReplace(**{"name":'USERTOKEN',"length":"0"}))
+        self._fields.append(fieldReplace(**{"name":'TOKENDATE',"length":"0"}))
 
     @property
     def hasGlobalID(self):
