@@ -516,7 +516,9 @@
           });
           this.emit("showMessage", assetAlreadyAdoptedMsg);
         } else {
-          this.nickNameInputTextBox.set('value', "");
+          if (this.nickNameInputTextBox) {
+            this.nickNameInputTextBox.set('value', "");
+          }
           this._adoptAsset(response.features[0]);
         }
         this.showAssetInfoPopup(response.features[0]);
