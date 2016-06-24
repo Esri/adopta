@@ -1,0 +1,93 @@
+{
+  "assetLayerDetails": {
+    "url": "http://services.arcgis.com/b6gLrKHqgkQb393u/arcgis/rest/services/Vacant_Lots/FeatureServer/0",
+    "geometryType": "point",
+    "id": "Vacant_Lots_59"
+  },
+  "foreignKeyFieldForUserTable": "RelateGUID",
+  "authGPServiceURL": "http://54.183.93.10:6080/arcgis/rest/services/ADOPTALOT/GPServer/AuthGP",
+  "nickNameField": "Nickname",
+  "showReverseGeocodedAddress": true,
+  "highlightColor": "#00ffff",
+  "loginHelpText": "<div style='text-align: center;font-size:18px;'>Returning user?</div><br><div style='text-align: center;'>Enter your email and login to adopt a catch basin.</div><br><div style='text-align: center;font-size:18px;'>First time here?</div><div style='text-align: center;'><br><span style='text-align: center;'>Don't worry, it's easy!  Enter your email address and signup, we will send you an email to confirm.<br><br><br>The Adopt a Lot program offers vacant lots to maintain as your own. By joining the program, you can use your lot to grow a vegetable garden, plant trees, or even build a small park or play area children. <br><br><br></div>",
+  "additionalLoginParameters": [],
+  "actions": {
+    "assign": {
+      "name": "Adopt",
+      "assignLabel": "Adopt Me",
+      "assignedLabel": "Adopted",
+      "urlParameterLabel": "assign",
+      "fieldsToUpdate": [
+        {
+          "field": "Assetstatus",
+          "action": "SetValue",
+          "value": "Adopted"
+        },
+        {
+          "field": "Adopteddate",
+          "action": "SetDate"
+        },
+        {
+          "field": "Laststatusupdate",
+          "action": "SetDate"
+        }
+      ]
+    },
+    "unAssign": {
+      "name": "Abandon",
+      "urlParameterLabel": "unassign",
+      "displayInMyAssets": false,
+      "fieldsToUpdate": [
+        {
+          "field": "Assetstatus",
+          "action": "SetValue",
+          "value": "Available"
+        },
+        {
+          "field": "Adopteddate",
+          "action": "Clear"
+        },
+        {
+          "field": "Laststatusupdate",
+          "action": "SetDate"
+        }
+      ]
+    },
+    "additionalActions": [
+      {
+        "name": "Click if clean",
+        "urlParameterLabel": "clean",
+        "displayInMyAssets": true,
+        "fieldsToUpdate": [
+          {
+            "field": "Lastcleaneddate",
+            "action": "SetDate"
+          }
+        ]
+      }
+    ]
+  },
+  "myAssetSymbol": {
+    "angle": 0,
+    "xoffset": 0,
+    "yoffset": 0,
+    "type": "esriPMS",
+    "url": "http://static.arcgis.com/images/Symbols/Shapes/OrangeCircleLargeB.png",
+    "imageData": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAZdEVYdFNvZnR3YXJlAEFkb2JlIEltYWdlUmVhZHlxyWU8AAADImlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS4wLWMwNjAgNjEuMTM0Nzc3LCAyMDEwLzAyLzEyLTE3OjMyOjAwICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdFJlZj0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlUmVmIyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpGOTY4NzM3NUQyN0YxMUUwQUU5NUVFMEYwMTY0NzUwNSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpGOTY4NzM3NkQyN0YxMUUwQUU5NUVFMEYwMTY0NzUwNSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkY5Njg3MzczRDI3RjExRTBBRTk1RUUwRjAxNjQ3NTA1IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkY5Njg3Mzc0RDI3RjExRTBBRTk1RUUwRjAxNjQ3NTA1Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQg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",
+    "contentType": "image/png",
+    "width": 30,
+    "height": 30
+  },
+  "toleranceSettings": {
+    "distance": 10,
+    "distanceUnits": 9001,
+    "distanceSettings": {
+      "miles": 9035,
+      "kilometers": 9036,
+      "feet": 9002,
+      "meters": 9001,
+      "yards": 9037,
+      "nauticalMiles": 9030
+    }
+  }
+}
