@@ -19,7 +19,7 @@
   'dojo/string',
   'jimu/utils',
   'dojo/query',
-  "esri/graphic"
+  'esri/graphic'
 ], function (
   declare,
   array,
@@ -51,7 +51,7 @@
     layer: null,
     countLabel: null,
     maxLength: null,
-    actionPerformedInDetails: [],
+    actionPerformedInDetails: {},
     prevNicknameValue: null,
     primaryAction: null,
     constructor: function (options) {
@@ -106,8 +106,15 @@
       this.showPanel("assetDetails");
       this._featureInfoPanel.setContent(this.selectedFeature.getContent());
       if (this._locatorInstance) {
-        this._locatorInstance.locationToAddress(webMercatorUtils.webMercatorToGeographic(
-        selectedFeature.geometry), 100);
+        //For point layer take the clicked location
+        if (selectedFeature.geometry.type === "point") {
+          this._locatorInstance.locationToAddress(webMercatorUtils.webMercatorToGeographic(
+            selectedFeature.geometry), 100);
+        } else {
+          //For line/polygon take the center point of selected feature
+          this._locatorInstance.locationToAddress(webMercatorUtils.webMercatorToGeographic(
+            selectedFeature.geometry.getExtent().getCenter()), 100);
+        }
       }
       assetStatus = this._checkAssetAdoptionStatus(this.selectedFeature);
       this._createAdoptActionContainer(assetStatus);
@@ -156,10 +163,10 @@
             "class": "esriCTFullWidth"
           }, this.adoptActionContainer);
           this.nickNameInputTextBox = new TextBox({
-            placeHolder: this.nls.nameAssetTextBoxPlaceholder
+            placeHolder: this.config.nameAssetTextBoxPlaceholder
           });
           this.nickNameInputTextBox.placeAt(nicknameContainer);
-          //set maximium length for nickname field
+          //set maximum length for nickname field
           this._setTextAreaMaxLength();
           this.own(on(this.nickNameInputTextBox, "keyup", lang.hitch(this, function () {
             this._calculateCharactersCount();
@@ -190,7 +197,7 @@
               updatedAttributes[this.config.nickNameField] =
                 this.nickNameInputTextBox.getValue();
             }
-            if (domAttr.get(adoptBtn, "innerHTML") === this.config.actions.assign.assignLabel) {
+            if (domAttr.get(adoptBtn, "innerHTML") === this.config.actions.assign.name) {
               this._adoptAsset(this.selectedFeature);
             } else {
               //as we are updateing only the nick name field send action as null
@@ -214,7 +221,7 @@
       var buttonText;
       if (assetStatus.isAssetAdopted && !assetStatus.isAssetAdoptedByLoggedInUser) {
         domClass.add(adoptBtn, "jimu-state-disabled");
-        buttonText = this.config.actions.assign.assignedLabel;
+        buttonText = this.config.actions.unAssign.name;
       } else {
         if (assetStatus.isAssetAdoptedByLoggedInUser) {
           if (this.config.nickNameField !== "") {
@@ -226,13 +233,13 @@
           }
           if (!this.config.nickNameField) {
             domClass.add(adoptBtn, "jimu-state-disabled");
-            buttonText = this.config.actions.assign.assignedLabel;
+            buttonText = this.config.actions.unAssign.name;
           } else {
             domClass.add(adoptBtn, "jimu-state-disabled");
             buttonText = this.nls.nickNameUpdateButtonLabel;
           }
         } else {
-          buttonText = this.config.actions.assign.assignLabel;
+          buttonText = this.config.actions.assign.name;
         }
       }
       domAttr.set(adoptBtn, "innerHTML", buttonText);
@@ -333,11 +340,11 @@
     * @param {boolean} flag to decide the visibility of details panel
     * @memberOf widgets/Adopta/AssetDetails
     */
-    _updateFeatureDetails: function (selectedFeature, actionName, showAssetDetails,
+    _updateFeatureDetails: function(selectedFeature, actionName, showAssetDetails,
      updatedAttributes) {
-      var isNewAssetAdopted, adoptionCompleteMsg, showMesssage = true;
-
-      //if action is adoopted it means new asset is addopted
+      var isNewAssetAdopted, adoptionCompleteMsg, updatedFeatureAttributes = {},
+        showMesssage = true, graphicsArray = [];
+      //if action is adopted it means new asset is adopted
       if (actionName === this.config.actions.assign.name) {
         isNewAssetAdopted = true;
         //If action is assign, check if nick name field has some value and pass the
@@ -352,80 +359,77 @@
       //Add objectId of selected Feature before updating the feature values
       updatedAttributes[this.layer.objectIdField] =
         selectedFeature.attributes[this.layer.objectIdField];
-      //pass all the updated values to desired object
-
       this.loading.show();
-      adoptionCompleteMsg = string.substitute(this.nls.adoptionCompleteMsg, {
-        'assetTitle': this._getAssetTitle(selectedFeature)
-      });
-      var arr = [];
-      var updatedFeatureAttributes = new Graphic(null, null, updatedAttributes, null);
-      arr.push(updatedFeatureAttributes);
-
-      this.layer.applyEdits(null, arr, null,
-          lang.hitch(this, function (added, updated, deleted) {
-            /*jshint unused: false*/
-            if (updated[0].success) {
-              //update action performed array to show green check symbol for primary action
-              this._updateActionPerformedArray(actionName, selectedFeature);
-              //Refresh layer and show the updated information in asset details panel
-              this.layer.refresh();
-              if (showAssetDetails) {
-                this.showAssetInfoPopup(selectedFeature);
+      adoptionCompleteMsg = this._createMessageFromString('assetTitle', this.config
+        .adoptionCompleteMsg, this._getAssetTitle(selectedFeature));
+      updatedFeatureAttributes = new Graphic(null, null, updatedAttributes, null);
+      graphicsArray.push(updatedFeatureAttributes);
+      this.layer.applyEdits(null, graphicsArray, null, lang.hitch(this,
+        function (added, updated, deleted) {
+          /*jshint unused: false*/
+          if (updated[0].success) {
+            //update action performed array to show green check symbol for primary action
+            this._updateActionPerformedArray(actionName, selectedFeature);
+            //Refresh layer and show the updated information in asset details panel
+            this.layer.refresh();
+            if (showAssetDetails) {
+              this.showAssetInfoPopup(selectedFeature);
+            } else {
+              this.emit("showMyAssets", selectedFeature);
+            }
+            if (isNewAssetAdopted) {
+              this.emit("showMessage", adoptionCompleteMsg);
+              //If asset is adopted, increment the count of total number of adopted asset by logged in user
+              this.emit("assetAdopted", selectedFeature.attributes[this.layer.objectIdField]);
+            } else {
+              this.emit("actionPerformed", actionName,
+                selectedFeature.attributes[this.layer.objectIdField]);
+              if (actionName === this.config.actions.unAssign.name) {
+                this.emit("showMessage", this.config.abandonCompleteMsg);
+                if (selectedFeature.symbol) {
+                  selectedFeature.symbol = null;
+                }
+                //Remove previously saved nick name
+                if (this.prevNicknameValue) {
+                  this.prevNicknameValue = null;
+                }
+                //if action is unAssign update the highlight symbol
+                this.emit("highlightFeatureOnMap", selectedFeature);
               } else {
-                this.emit("showMyAssets", selectedFeature);
-              }
-              if (isNewAssetAdopted) {
-                this.emit("showMessage", adoptionCompleteMsg);
-                //If asset is adopted, increment the count of total number of adopted asset by logged in user
-                this.emit("assetAdopted", selectedFeature.attributes[this.layer.objectIdField]);
-              } else {
-                this.emit("actionPerformed", actionName,
-                  selectedFeature.attributes[this.layer.objectIdField]);
-                if (actionName === this.config.actions.unAssign.name) {
-                  this.emit("showMessage", string.substitute(this.nls.abandonCompleteMsg,
-                    { assetTitle: this._getAssetTitle(selectedFeature), actionName: actionName }));
-                  if (selectedFeature.symbol) {
-                    selectedFeature.symbol = null;
-                  }
-                  //if action is unAssign update the highlight symbol
-                  this.emit("highlightFeatureOnMap", selectedFeature);
-                } else {
-                  //Check if action name exsist, if not we assume user has updated assset's nickname
-                  if ((this.primaryAction && this.primaryAction.name === actionName) ||
-                    !actionName) {
-                    showMesssage = false;
-                  }
-                  if (showMesssage) {
-                    this.emit("showMessage", string.substitute(this.nls.actionCompleteMsg,
-                      { 'actionName': actionName }));
-                  }
+                //Check if action name exist, if not we assume user has updated assets nickname
+                if ((this.primaryAction && this.primaryAction.name === actionName) ||
+                  !actionName) {
+                  showMesssage = false;
+                }
+                if (showMesssage) {
+                  this.emit("showMessage", this._createMessageFromString(
+                    "actionName", this.config.actionCompleteMsg, actionName
+                  ));
                 }
               }
-            } else {
-              //if action is adoopted it means new asset is addopted
-              if (actionName === this.config.actions.assign.name) {
-                //Show error if adoption fails
-                this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
-              } else {
-                this.emit("showMessage", string.substitute(this.nls.actionFailedMsg,
-                  { 'actionName': actionName }));
-              }
             }
-            this.loading.hide();
-          }),
-          lang.hitch(this, function (error) {
-            //if action is adoopted it means new asset is addopted
+          } else {
+            //if action is adopted it means new asset is adopted
             if (actionName === this.config.actions.assign.name) {
               //Show error if adoption fails
               this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
             } else {
-              this.emit("showMessage", string.substitute(this.nls.actionFailedMsg,
-                { 'actionName': actionName }));
+              this.emit("showMessage", this._createMessageFromString(
+                "actionName", this.nls.actionFailedMsg, actionName));
             }
-            this.loading.hide();
-          })
-        );
+          }
+          this.loading.hide();
+        }), lang.hitch(this, function () {
+          //if action is adopted it means new asset is adopted
+          if (actionName === this.config.actions.assign.name) {
+            //Show error if adoption fails
+            this.emit("showMessage", this.nls.unableToAdoptAssetMsg);
+          } else {
+            this.emit("showMessage", this._createMessageFromString("actionName",
+              this.nls.actionFailedMsg, actionName));
+          }
+          this.loading.hide();
+        }));
     },
 
     /**
@@ -439,14 +443,11 @@
       var fieldsToUpdate, updatedAttributes = {};
       //check if action is unAssign choose its fields to update
       if (actionName === this.config.actions.unAssign.name) {
-        selectedFeature.attributes[this.config.foreignKeyFieldForUserTable] = null;
-        //Remove related GUI field from respective field
-        updatedAttributes[this.config.foreignKeyFieldForUserTable] = null;
         fieldsToUpdate = this.config.actions.unAssign.fieldsToUpdate;
       } else if (actionName === this.config.actions.assign.name) {
-        //Add related GUI field from respective field
-        updatedAttributes[this.config.foreignKeyFieldForUserTable] = this.config
-        .userDetails[this.config.foreignKeyFieldForUserTable];
+        //Add related GUI field value from respective field
+        this.config.actions.assign.fieldsToUpdate[0].value = this.config
+          .userDetails[this.config.foreignKeyFieldForUserTable];
         //check if action is assign choose its fields to update and set adopt action flag
         fieldsToUpdate = this.config.actions.assign.fieldsToUpdate;
       }
@@ -463,18 +464,18 @@
       array.forEach(fieldsToUpdate, lang.hitch(this,
         function (currentAction) {
           switch (currentAction.action) {
-            case "SetValue":
-              selectedFeature.attributes[currentAction.field] = currentAction.value;
-              updatedAttributes[currentAction.field] = currentAction.value;
-              break;
-            case "SetDate":
-              selectedFeature.attributes[currentAction.field] = Date.now();
-              updatedAttributes[currentAction.field] = Date.now();
-              break;
-            case "Clear":
-              selectedFeature.attributes[currentAction.field] = null;
-              updatedAttributes[currentAction.field] = null;
-              break;
+          case "SetValue":
+            selectedFeature.attributes[currentAction.field] = currentAction.value;
+            updatedAttributes[currentAction.field] = currentAction.value;
+            break;
+          case "SetDate":
+            selectedFeature.attributes[currentAction.field] = Date.now();
+            updatedAttributes[currentAction.field] = Date.now();
+            break;
+          case "Clear":
+            selectedFeature.attributes[currentAction.field] = null;
+            updatedAttributes[currentAction.field] = null;
+            break;
           }
         }));
       this._updateFeatureDetails(selectedFeature, actionName, showAssetDetails, updatedAttributes);
@@ -507,15 +508,14 @@
     * @memberOf widgets/Adopta/AssetDetails
     */
     getSelectedAssetDetails: function (response) {
-      var assetAlreadyAdoptedMsg;
       if (response && response.features[0]) {
         //check if asset is already adopted
         if (this._checkAssetAdoptionStatus(response.features[0]).isAssetAdopted) {
-          assetAlreadyAdoptedMsg = string.substitute(this.nls.assetAlreadyAdoptedMsg, {
-            'assetTitle': this._getAssetTitle(response.features[0])
-          });
-          this.emit("showMessage", assetAlreadyAdoptedMsg);
+          this.emit("showMessage",
+            this._createMessageFromString('assetTitle', this.config.assetAlreadyAdoptedMsg,
+            this._getAssetTitle(response.features[0])));
         } else {
+          //If nickname text input exist, make it empty to make sure it does not mixin with next selected asset
           if (this.nickNameInputTextBox) {
             this.nickNameInputTextBox.set('value', "");
           }
@@ -525,7 +525,7 @@
         this.emit("highlightFeatureOnMap", this.selectedFeature);
       } else {
         //Show error if adoption fails
-        this.emit("showMessage", this.nls.assetNotFoundMsg);
+        this.emit("showMessage", this.config.assetNotFoundMsg);
       }
     },
 
@@ -551,29 +551,62 @@
     * @memberOf widgets/Adopta/AssetDetails
     */
     _createBtn: function (currentAction, parentNode) {
-      var actionBtn, actionBtnContainer, featureObjectId;
+      var actionBtn, actionBtnContainer, featureObjectId, adoptActionBtnContainer,
+      imageContainer;
       featureObjectId = this.selectedFeature.attributes[this.layer.objectIdField];
-      //If primary action is already perfomred on an asset, make sure we display green check box
+      actionBtnContainer = domConstruct.create("div", {
+        "class": "esriCTActionPerformedContainer esriCTCursorPointer"
+      }, parentNode);
+
+      actionBtn = domConstruct.create("div", {
+        "class": "esriCTEllipsis esriCTStaticWidth",
+        "innerHTML": jimuUtils.sanitizeHTML(currentAction.name),
+        "title": currentAction.name
+      }, actionBtnContainer);
+
+      adoptActionBtnContainer = domConstruct.create("div", {
+        "class": "esriCTBtnContainer"
+      }, actionBtnContainer);
+
+      imageContainer = domConstruct.create("img", {
+        "class": "esriCTAssetDetailsImageDimensions"
+      }, adoptActionBtnContainer);
+
+      //If primary action is already performed on an asset, make sure we display green check box
       if (this.actionPerformedInDetails &&
-        this.actionPerformedInDetails.indexOf(featureObjectId) !== -1 &&
-        currentAction.displayInMyAssets) {
-        actionBtnContainer = domConstruct.create("div", {
-          "class": "esriCTActionPerformedContainer"
-        }, parentNode);
-        domConstruct.create("div", {
-          "class": "esriCTAssetDetailsGreenCheck"
-        }, actionBtnContainer);
+        this.actionPerformedInDetails.hasOwnProperty(featureObjectId) &&
+        this.actionPerformedInDetails[featureObjectId].indexOf(currentAction.name) !== -1) {
+        this._createImageFromData(this.config.afterActionImage, imageContainer);
+        domClass.remove(actionBtnContainer, "esriCTCursorPointer");
       } else {
-        actionBtn = domConstruct.create("div", {
-          "class": "esriCTEllipsis jimu-btn esriCTStaticWidth",
-          "innerHTML": jimuUtils.sanitizeHTML(currentAction.name),
-          "title": currentAction.name
-        }, parentNode);
-        domAttr.set(actionBtn, "actionLabel", currentAction.name);
-        this.own(on(actionBtn, "click", lang.hitch(this, function (evt) {
+        this._createImageFromData(this.config.beforeActionImage, imageContainer);
+        domAttr.set(actionBtnContainer, "actionLabel", currentAction.name);
+        this.own(on(actionBtnContainer, "click", lang.hitch(this, function (evt) {
           this._fetchFieldsToBeUpdated(domAttr.get(evt.currentTarget, "actionLabel"));
         })));
       }
+    },
+
+    /**
+    * Create image form image URL/image data
+    * @param {string} current action
+    * @param {string} parent node in which image will be displayed
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    _createImageFromData: function (action, imageNode) {
+      var baseURL, imageSrc;
+      if (action) {
+        if (action.imageData.indexOf("${appPath}") > -1) {
+          baseURL = location.href.slice(0, location.href.lastIndexOf(
+            '/'));
+          imageSrc = string.substitute(action.imageData, {
+            appPath: baseURL
+          });
+        } else {
+          imageSrc = action.imageData;
+        }
+      }
+      domAttr.set(imageNode, "src", imageSrc);
     },
 
     /**
@@ -640,21 +673,46 @@
       var objectId = selectedFeature.attributes[this.layer.objectIdField];
       array.forEach(this.config.actions.additionalActions, lang.hitch(this,
         function (currentAction) {
-          if (currentAction.name === actionName && currentAction.displayInMyAssets) {
+          if (currentAction.name === actionName) {
             if (this.actionPerformedInDetails &&
-              this.actionPerformedInDetails.indexOf(objectId) === -1) {
-              this.actionPerformedInDetails.push(objectId);
+              !this.actionPerformedInDetails.hasOwnProperty(objectId)) {
+              // If the current action key does not exist, add it to action performed object
+              this.actionPerformedInDetails[objectId] = [];
+              this.actionPerformedInDetails[objectId].push(actionName);
+            } else {
+              //add other actions into array
+              if (this.actionPerformedInDetails[objectId].indexOf(actionName) === -1) {
+                this.actionPerformedInDetails[objectId].push(actionName);
+              }
             }
           }
         }));
 
       //If asset is abonded, remove it from the actionPerformed array
       if (this.actionPerformedInDetails &&
-        this.actionPerformedInDetails.indexOf(objectId) !== -1 &&
+        this.actionPerformedInDetails.hasOwnProperty(objectId) &&
         actionName === this.config.actions.unAssign.name) {
-        this.actionPerformedInDetails.splice(this.actionPerformedInDetails.indexOf(objectId), 1);
+        delete this.actionPerformedInDetails[objectId];
       }
       this.emit("updateActionsInAssets", this.actionPerformedInDetails);
+    },
+
+    /**
+    * Update actions array
+    * @param {string} key which will contain value to be substituted
+    * @param {string} message from nls
+    * @param {string} value which will be substituted with the help of key
+    * @memberOf widgets/Adopta/AssetDetails
+    */
+    _createMessageFromString : function (key, message, keyValue) {
+      var newStringMessage, obj = {};
+      obj[key] = keyValue;
+      if (message.indexOf(key) !== -1) {
+        newStringMessage = string.substitute(message, obj);
+      } else {
+        newStringMessage = message;
+      }
+      return newStringMessage;
     }
   });
 });

@@ -11,7 +11,9 @@
   'dojo/store/Memory',
   'dijit/form/ComboBox',
   'dojo/on',
+  'dojo/Deferred',
   'dojo/query',
+  'dojo/dom-construct',
   'dojo/dom-class',
   'dojo/dom-attr',
   'dojo/dom-style',
@@ -31,7 +33,9 @@
   Memory,
   ComboBox,
   on,
+  Deferred,
   query,
+  domConstruct,
   domClass,
   domAttr,
   domStyle,
@@ -42,7 +46,7 @@
   return declare([BaseWidget, Evented, _WidgetsInTemplateMixin], {
     baseClass: 'jimu-widget-Adopta-Login',
     templateString: LoginTemplate, //set template string
-    userDetails: {}, //objet to hold user info like userId, email etc
+    userDetails: {}, //object to hold user info like userId, email etc
     userTableLayer: null,
     _teamFieldComboBox: null,
     urlParamsToBeAdded: {}, //Parameters to be added in url which will be sent via email
@@ -69,7 +73,7 @@
         validator: validate.isEmailAddress,
         placeHolder: this.nls.emailPlaceHolderText,
         isRequired: true,
-        maxlength: 100 //set max length for email feild as 100
+        maxlength: 100 //set max length for email field as 100
       });
       this.emailTextbox.placeAt(this.emailContainer);
       this.own(on(this.emailTextbox, "keypress", lang.hitch(this, function (evt) {
@@ -80,9 +84,6 @@
         }
       })));
       this.own(on(this.loginBtn, "click", lang.hitch(this, this._loginBtnClicked)));
-
-      //Get unique team names for team auto complete box
-      this._getUniqueTeamNames();
 
       //Create additional fields if configured
       if (this.config.additionalLoginParameters.length > 0) {
@@ -100,7 +101,28 @@
       }
 
       //set height of login info container
-      this._calculateHight();
+      this.calculateHight();
+
+      //Listen for registeredUserLink click event
+      on(this.registeredUserLink, "click", lang.hitch(this, function () {
+        this._resetLoginPanel();
+        this.calculateHight();
+      }));
+    },
+
+    /**
+    * Reset login panel by hiding all the other additional sign up fields
+    * @memberOf widgets/Adopta/Login
+    **/
+    _resetLoginPanel: function () {
+      domClass.add(this.additionalFieldsContainer, "esriCTHidden");
+      domClass.add(this.registeredUserLink, "esriCTHidden");
+      domAttr.set(this.loginBtn, "innerHTML", this.nls.loginSignUpLabel);
+      //Reset additional fields
+      array.forEach(this.config.additionalLoginParameters,
+        lang.hitch(this, function (currentField) {
+          currentField.control.set("value", "");
+        }));
     },
 
     /**
@@ -177,11 +199,13 @@
       }
       this._authGPService.execute(params, lang.hitch(this, function (
           response) {
-        if (response[0].value && response[0].value.status.toLowerCase() === "success") {
+        if (response && response.length > 0 && response[0].value && response[0]
+          .value.status.toLowerCase() === "success") {
           if (usingUserID) {
             if (response[0].value && typeof (response[0].value.description) === "string" &&
               response[0].value.description.toLowerCase() === "regenerated usertoken") {
-              this.signUpSuccessfull(this.nls.userTokenExpiredMsg);
+              this.showMsg(this.config.userTokenExpiredMsg);
+              this.emit("invalidLogin");
             } else {
               this.userDetails[this.config.foreignKeyFieldForUserTable] =
                 this.config.urlParams.userid;
@@ -191,33 +215,49 @@
               this.loggedIn(this.userDetails);
             }
           } else {
-            this.signUpSuccessfull(this.nls.gpServiceSuccessMsg);
+            this.showMsg(this.config.gpServiceSuccessMsg);
+            this.emit("invalidLogin");
           }
           this.loading.hide();
         } else {
           if (!usingUserID) {
-            if (response[0].value && response[0].value.status.toLowerCase() === "failed" &&
-            typeof (response[0].value.description) === "string" &&
-              response[0].value.description.toLowerCase() === "user does not exist") {
+            if (response && response.length > 0 && response[0].value &&
+              response[0].value.status.toLowerCase() === "failed" &&
+              typeof(response[0].value.description) === "string" &&
+              response[0].value.description.toLowerCase() ===
+              "user does not exist") {
               domAttr.set(this.loginBtn, "innerHTML", this.nls.signUpLabel);
               //If teamfield is not configured or additional fields are not configured then
               //directly call signup
-              if (!this.config.teamField &&
-                this.config.additionalLoginParameters.length === 0) {
-                this._loginBtnClicked();
-              } else {
-                domClass.remove(this.additionalFieldsContainer, "esriCTHidden");
-                //set height of login info container
-                this._calculateHight();
-                this.loading.hide();
-              }
+              //Get unique team names for team auto complete box
+              this._getUniqueTeamNames().then(lang.hitch(this, function () {
+                if (!this.config.teamField &&
+                  this.config.additionalLoginParameters.length === 0) {
+                  this._loginBtnClicked();
+                } else {
+                  domClass.remove(this.additionalFieldsContainer, "esriCTHidden");
+                  //Show link to navigate back to basic login form
+                  domClass.remove(this.registeredUserLink, "esriCTHidden");
+                  //set height of login info container
+                  this.calculateHight();
+                  this.loading.hide();
+                }
+              }));
             } else {
-              this.showMsg(response[0].value.description);
+              if (response && response.length > 0) {
+                this.showMsg(response[0].value.description);
+              } else {
+                this.showMsg(this.nls.noOutputParameterMsg);
+              }
               this.emit("invalidLogin");
               this.loading.hide();
             }
           } else {
-            this.showMsg(response[0].value.description);
+            if (response && response.length > 0) {
+              this.showMsg(response[0].value.description);
+            } else {
+              this.showMsg(this.nls.noOutputParameterMsg);
+            }
             this.emit("invalidLogin");
             this.loading.hide();
           }
@@ -334,11 +374,17 @@
       }
       this._authGPService.execute(params, lang.hitch(this, function (
       response) {
-        if (response[0].value.status.toLowerCase() === "success") {
-          this.signUpSuccessfull(this.nls.gpServiceSuccessMsg);
+        if (response && response.length > 0 &&
+          response[0].value.status.toLowerCase() === "success") {
+          this.showMsg(this.config.gpServiceSuccessMsg);
+          this._resetLoginPanel();
           this.loading.hide();
         } else {
-          this.showMsg(response[0].value.description);
+          if (response && response.length > 0) {
+            this.showMsg(response[0].value.description);
+          } else {
+            this.showMsg(this.nls.noOutputParameterMsg);
+          }
           this.loading.hide();
         }
       }), function (err) {
@@ -352,7 +398,7 @@
     * @memberOf widgets/Adopta/Login
     **/
     _getUniqueTeamNames: function () {
-      var params;
+      var params, deferred = new Deferred();
       params = {
         "Action": "Teams"
       };
@@ -360,18 +406,21 @@
       this._authGPService.execute(params, lang.hitch(this, function (
           response) {
         var selectedUniqueValues = [];
-        if (response[0].value.status.toLowerCase() === "success" &&
+        if (response && response.length > 0 &&
+          response[0].value.status.toLowerCase() === "success" &&
           response[0].value.description &&
           response[0].value.description.teamfield) {
           this.config.teamField = response[0].value.description.teamfield;
-          //push selected attributes's value of all the features into an array
+          //push selected attributes value of all the features into an array
           array.forEach(response[0].value.description.features, lang.hitch(this,
             function (feature) {
               selectedUniqueValues.push({ "name": feature.attributes[this.config.teamField.name] });
             }));
           this._createTeamAutoCompleteBox(selectedUniqueValues);
         }
+        deferred.resolve();
       }));
+      return deferred.promise;
     },
 
     /**
@@ -380,6 +429,7 @@
     **/
     _createTeamAutoCompleteBox: function (selectedUniqueValues) {
       var teamNamesStore;
+      domConstruct.empty(this.teamContainer);
       teamNamesStore = new Memory({
         data: selectedUniqueValues
       });
@@ -406,7 +456,7 @@
     * Calculate hegiht for login info container
     * @memberOf widgets/Adopta/Login
     **/
-    _calculateHight: function () {
+    calculateHight: function () {
       var fixedHeight;
       fixedHeight = query(".esriCTLoginSection")[0].clientHeight - this.loginDetailsContainer
         .clientHeight;
@@ -423,10 +473,6 @@
 
     loggedIn: function (userDetails) {
       this.emit("loggedIn", userDetails);
-    },
-
-    signUpSuccessfull: function (message) {
-      this.emit("signedIn", message);
     }
   });
 });

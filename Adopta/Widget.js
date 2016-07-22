@@ -15,11 +15,15 @@ define([
   'dojo/dom-construct',
   'esri/layers/GraphicsLayer',
   'esri/geometry/Point',
+  'esri/geometry/Polyline',
+  'esri/geometry/Polygon',
   'esri/graphic',
   'esri/SpatialReference',
   'esri/symbols/SimpleLineSymbol',
   'esri/symbols/SimpleMarkerSymbol',
+  'esri/symbols/SimpleFillSymbol',
   'esri/Color',
+  'esri/toolbars/draw',
   'esri/tasks/Geoprocessor',
   'jimu/utils',
   'esri/request',
@@ -43,11 +47,15 @@ function (
   domConstruct,
   GraphicsLayer,
   Point,
+  Polyline,
+  Polygon,
   Graphic,
   SpatialReference,
   SimpleLineSymbol,
   SimpleMarkerSymbol,
+  SimpleFillSymbol,
   Color,
+  Draw,
   Geoprocessor,
   jimuUtils,
   esriRequest,
@@ -63,7 +71,8 @@ function (
     _loading: null, //Loading indicator instance
     _featureGraphicsLayer: null, //Graphics layer to add highlight the features
     _showtooltip: true, //Flag to indicate whether to show the map tooltip or not
-    _confirmationBox: null, //Holds object of confirmation box
+    _confirmationBox: null, //Holds object of confirmation box,
+    _toolBar: null, //Holds draw toolbar object
 
     postCreate: function () {
       this.inherited(arguments);
@@ -104,6 +113,13 @@ function (
           lang.hitch(this, this._myAssestsBtnClicked)));
         //create & add graphics layer to highlight selected feature
         this._featureGraphicsLayer = new GraphicsLayer();
+        on(this._featureGraphicsLayer, "click", lang.hitch(this, function (evt) {
+          //Dispatch event to feature layer
+          if (evt.graphic) {
+            evt.graphic = this._assetDetails.selectedFeature;
+          }
+          this._assetLayer.onClick(evt);
+        }));
         this.map.addLayer(this._featureGraphicsLayer);
         //create Geoprocessor instance
         this._gpService = new Geoprocessor(this.config.gpServiceURL);
@@ -129,6 +145,7 @@ function (
       this._mapTooltipHandler = new MapTooltipHandler({
         nls: this.nls,
         map: this.map,
+        config: this.config,
         handleClickFor: this._assetLayer
       });
       //handle clicked event
@@ -170,7 +187,7 @@ function (
         this._mapTooltipHandler.connectEventHandler();
         this._mapTooltipHandler.updateTooltip();
         parameterLabel = this.config.actions.assign.urlParameterLabel;
-        //check for url params has adoptId addopt the selected asset
+        //check for url params has adoptId adopt the selected asset
         if (this.config.urlParams && this.config.urlParams.hasOwnProperty(parameterLabel)) {
           this._assetDetails.fetchSelectedAsset(this.config.urlParams[parameterLabel]).then(
             lang.hitch(this, function (response) {
@@ -178,14 +195,16 @@ function (
           }));
         }
         //handle map click handler as once user is logged in he can add assets
-        this.own(on(this.map, "click", lang.hitch(this, this._onMapClicked)));
+        this.mapClickHandler = on.pausable(this.map, "click", lang.hitch(this, this._onMapClicked));
       }));
+      //Listen for sign in event
       this._loginInstance.on("signedIn", lang.hitch(this, this._onSignedIn));
+      //If login process fails, show login panel and connect map events
       this._loginInstance.on("invalidLogin", lang.hitch(this, function () {
         this._showPanel("login");
         this._mapTooltipHandler.connectEventHandler();
       }));
-
+      //If user is successfully authenticated, disconnect map events
       this._loginInstance.on("userAuth", lang.hitch(this, function () {
         this._mapTooltipHandler.disconnectEventHandler();
       }));
@@ -193,34 +212,113 @@ function (
     },
 
     /**
-    * Add new asset on map click if no asset is found in confgured buffer distance
+    * Add new asset on map click if no asset is found in configured buffer distance
     * @params {evt} Map clicked event
     * @memberOf widgets/Adopta/Widget
     */
     _onMapClicked: function (evt) {
-      var bufferedGeometries, query;
+      var bufferedGeometries, query, newMsg;
       query = new Query();
       bufferedGeometries = geometryEngine.geodesicBuffer([evt.mapPoint],
         [this.config.toleranceSettings.distance],
         this.config.toleranceSettings.distanceUnits,
         true);
       query.geometry = bufferedGeometries[0];
+      //Incase of polygon and line layer, check if the feature intersects with the drawn buffer
+      if (this._assetLayer.geometryType !== "esriGeometryPoint") {
+        query.spatialRelationship = Query.SPATIAL_REL_INTERSECTS;
+      }
       this._assetLayer.queryIds(query, lang.hitch(this, function (features) {
         //on map click create asset only if any other asset does not exist in near by area
         if (features.length === 0) {
+          if (this.config.addAssetConfirmationMsg.indexOf('layerName') !== -1) {
+            newMsg = string.substitute(this.config.addAssetConfirmationMsg,
+              { layerName: this._assetLayer.name });
+          } else {
+            newMsg = this.config.addAssetConfirmationMsg;
+          }
           this._confirmationBox = new Message({
-            message: string.substitute(this.nls.addAssetConfirmationMsg,
-              { layerName: this._assetLayer.name }),
+            message: newMsg,
             type: "question",
             buttons: [{
               "label": this.nls.yesButtonLabel, "onClick": lang.hitch(this, function () {
-                this._loading.show();
-                this._addNewFeature(evt.mapPoint);
+                if (this._assetLayer.geometryType === "esriGeometryPoint") {
+                  this._confirmationBox.close();
+                  this._addNewFeature(evt.mapPoint);
+                } else if (this._assetLayer.geometryType === "esriGeometryPolygon") {
+                  this._createDrawTool(Draw.POLYGON);
+                } else {
+                  this._createDrawTool(Draw.POLYLINE);
+                }
               })
             }, { "label": this.nls.noButtonLabel }]
           });
         }
       }));
+    },
+
+    /**
+    * Create draw tool bar
+    * @params {object} type of geometry
+    * @memberOf widgets/Adopta/Widget
+    */
+    _createDrawTool: function (toolType) {
+      var confirmAssetStatus;
+      //Create toolbar instance
+      this._toolBar = new Draw(this.map);
+      //Disconnect map event handler and remove tooltip from map
+      this._mapTooltipHandler.disconnectEventHandler();
+      this.mapClickHandler.pause();
+      //activate the toolbar
+      this._toolBar.activate(toolType);
+      //close popup
+      this._confirmationBox.close();
+      this._toolBar.on("draw-end", lang.hitch(this, function (feature) {
+        this._addGraphicsToMap(feature);
+        confirmAssetStatus = new Message({
+          message: this.nls.assetConfirmationMsg,
+          type: "question",
+          buttons: [{
+            "label": this.nls.yesButtonLabel, "onClick": lang.hitch(this, function () {
+              confirmAssetStatus.close();
+              this._loading.show();
+              this._addNewFeature(feature.geometry);
+            })
+          }, {
+              "label": this.nls.noButtonLabel, "onClick": lang.hitch(this, function () {
+                confirmAssetStatus.close();
+                this._resetMapHandlers();
+              })
+            }]
+        });
+      }));
+    },
+
+    /**
+    * connect/disconnect map events based on response
+    * @memberOf widgets/Adopta/Widget
+    */
+    _resetMapHandlers: function () {
+      this._toolBar.deactivate();
+      this.map.graphics.clear();
+      this._mapTooltipHandler.connectEventHandler();
+      this.mapClickHandler.resume();
+    },
+
+    /**
+    * Add drawn graphics to layer
+    * @params {object} features geometry
+    * @memberOf widgets/Adopta/Widget
+    */
+    _addGraphicsToMap : function (feature) {
+      var symbol;
+      if (feature.geometry.type === "polyline") {
+        symbol = new SimpleLineSymbol();
+      } else {
+        symbol = new SimpleFillSymbol();
+      }
+      var graphic = new Graphic(feature.geometry, symbol);
+      this.map.graphics.add(graphic);
     },
 
     /**
@@ -230,7 +328,6 @@ function (
     */
     _addNewFeature: function (mapPoint) {
       var newAssetGraphic;
-      this._confirmationBox.close();
       newAssetGraphic = new Graphic();
       newAssetGraphic.attributes = {};
       newAssetGraphic.geometry = lang.clone(mapPoint);
@@ -238,18 +335,21 @@ function (
       this._assetLayer.applyEdits([newAssetGraphic], null, null,
         lang.hitch(this, function (addResults) {
           this._loading.hide();
-          //once new asset is added to the layer adopt it.
+          //once new asset is added to the layer, adopt it.
           if (addResults[0].success) {
             this._assetDetails.fetchSelectedAsset(addResults[0].objectId).then(lang.hitch(this,
               function (response) {
               this._assetDetails.getSelectedAssetDetails(response);
             }));
           } else {
-            this._showMessage(this.nls.unableToAddNewAssetMsg);
+            this._showMessage(this.config.unableToAddNewAssetMsg);
+          }
+          if (this._toolBar) {
+            this._resetMapHandlers();
           }
         }), lang.hitch(this, function () {
           this._loading.hide();
-          this._showMessage(this.nls.unableToAddNewAssetMsg);
+          this._showMessage(this.config.unableToAddNewAssetMsg);
         }));
     },
 
@@ -317,8 +417,8 @@ function (
         this._highlightFeatureOnMap(selectedFeature, true);
       }));
 
-      on(this._assetDetails, "updateActionsInAssets", lang.hitch(this, function (actionsArray) {
-        this._myAssetsInstance._actionPerformed = actionsArray;
+      on(this._assetDetails, "updateActionsInAssets", lang.hitch(this, function (actionsObject) {
+        this._myAssetsInstance._actionPerformed = actionsObject;
       }));
 
       on(this._assetDetails, "showMyAssets", lang.hitch(this, function () {
@@ -391,8 +491,8 @@ function (
       }));
 
       on(this._myAssetsInstance, "updateActionsInDetails", lang.hitch(this,
-        function (actionsArray) {
-        this._assetDetails.actionPerformedInDetails = actionsArray;
+        function (actionsObject) {
+        this._assetDetails.actionPerformedInDetails = actionsObject;
       }));
     },
 
@@ -404,11 +504,11 @@ function (
       if (lang.trim(domAttr.get(this.myAssestsBtn, "innerHTML")) === this.nls.loginSignUpLabel) {
         this._showPanel("login");
       } else {
-        //If the selected asset was abonded, we need to clear the selected map graphics
-        //beacuse the asset will not be present on myassets list
+        //If the selected asset was abandoned, we need to clear the selected map graphics
+        //because the asset will not be present on myassets list
         if (!this._myAssetsInstance.getSelectedAsset() ||
           this._myAssetsInstance.myAssets.length === 0) {
-          this._clearGrahics();
+          this._clearGraphics();
         }
         if (this._myAssetsInstance && this._myAssetsInstance.myAssets.length > 0) {
           if (domClass.contains(this._myAssetsInstance.selecetAssetSection, "esriCTHidden") &&
@@ -550,9 +650,19 @@ function (
     * clear graphics from map
     * @memberOf widgets/Adopta/Widget
     **/
-    _clearGrahics: function () {
+    _clearGraphics: function () {
       if (this._featureGraphicsLayer) {
         this._featureGraphicsLayer.clear();
+      }
+    },
+
+    /**
+    * Resize the widget components on widget resize
+    * @memberOf widgets/Adopta/Widget
+    */
+    resize: function () {
+      if(this._loginInstance){
+        this._loginInstance.calculateHight();
       }
     },
 
@@ -563,34 +673,45 @@ function (
     * @memberOf widgets/Adopta/Widget
     **/
     _highlightFeatureOnMap: function (selectedFeature, isCenterAndZoom) {
-      var graphics, point, symbol;
+      var highlightSymbol;
       //highlight features on map only if layer is visible
       if (this._assetLayer.visible) {
-        this._clearGrahics();
-        if (selectedFeature.symbol) {
-          symbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_SQUARE,
-          null, new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
-          new Color(this.config.highlightColor), 3));
-          symbol.setColor(null);
-          symbol.size = 30; //set default Symbol size which will be used in case symbol not found.
-          point = new Point(selectedFeature.geometry.x, selectedFeature.geometry.y,
-            new SpatialReference({ wkid: selectedFeature.geometry.spatialReference.wkid })
-            );
-          symbol = this._updatePointSymbolProperties(symbol, selectedFeature.symbol);
-          graphics = new Graphic(point, symbol, selectedFeature.attributes);
-        } else {
-          graphics = this._getPointSymbol(selectedFeature, this._assetLayer);
+        this._clearGraphics();
+        highlightSymbol = this.getHighLightSymbol(selectedFeature, this._assetLayer);
+        if (highlightSymbol) {
+          this._featureGraphicsLayer.add(highlightSymbol);
         }
-        this._featureGraphicsLayer.add(graphics);
+        if (this._myAssetsInstance) {
+          this._myAssetsInstance.highlightItem(
+            selectedFeature.attributes[this._assetLayer.objectIdField]);
+        }
+        //If asset is selected through my asset list panel, bring the selected feature to the center of map
+        if (isCenterAndZoom) {
+          if (selectedFeature.geometry.type === "point") {
+            this.map.centerAt(selectedFeature.geometry);
+          } else {
+            this.map.setExtent(selectedFeature.geometry.getExtent());
+          }
+        }
       }
+    },
 
-      if (this._myAssetsInstance) {
-        this._myAssetsInstance.highlightItem(
-        selectedFeature.attributes[this._assetLayer.objectIdField]);
-      }
-      //If asset is selected through my asset list panel, bring the selected feature to the center of map
-      if (isCenterAndZoom) {
-        this.map.centerAt(point);
+    /**
+    * Get symbol used for highlighting feature
+    * @param{object} selected feature which needs to be highlighted
+    * @param{object} details of selected layer
+    */
+    getHighLightSymbol: function (graphic, layer) {
+      // If feature geometry is of type point, add a crosshair symbol
+      // If feature geometry is of type polyline, highlight the line
+      // If feature geometry is of type polygon, highlight the boundary of the polygon
+      switch (graphic.geometry.type) {
+        case "point":
+          return this._getPointSymbol(graphic, layer);
+        case "polyline":
+          return this._getPolyLineSymbol(graphic, layer);
+        case "polygon":
+          return this._getPolygonSymbol(graphic);
       }
     },
 
@@ -602,53 +723,66 @@ function (
     */
     _getPointSymbol: function (graphic, layer) {
       var symbol, isSymbolFound, graphics, point, graphicInfoValue,
-          layerInfoValue, i;
+        layerInfoValue, i;
       isSymbolFound = false;
-      symbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_SQUARE,
+      if (graphic.symbol) {
+        symbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_SQUARE,
           null, new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
             new Color(this.config.highlightColor), 3));
-      symbol.setColor(null);
-      symbol.size = 30; //set default Symbol size which will be used in case symbol not found.
-      //check if layer is valid and have valid renderer object then only check for other symbol properties
-      if (layer && layer.renderer) {
-        if (layer.renderer.symbol) {
-          isSymbolFound = true;
-          symbol = this._updatePointSymbolProperties(symbol, layer.renderer
+        symbol.setColor(null);
+        symbol.size = 30; //set default Symbol size which will be used in case symbol not found.
+        point = new Point(graphic.geometry.x, graphic.geometry.y,
+          new SpatialReference({ wkid: graphic.geometry.spatialReference.wkid })
+        );
+        symbol = this._updatePointSymbolProperties(symbol, graphic.symbol);
+        graphics = new Graphic(point, symbol, graphic.attributes);
+      } else {
+        symbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_SQUARE,
+          null, new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+            new Color(this.config.highlightColor), 3));
+        symbol.setColor(null);
+        symbol.size = 30; //set default Symbol size which will be used in case symbol not found.
+        //check if layer is valid and have valid renderer object then only check for other symbol properties
+        if (layer && layer.renderer) {
+          if (layer.renderer.symbol) {
+            isSymbolFound = true;
+            symbol = this._updatePointSymbolProperties(symbol, layer.renderer
               .symbol);
-        } else if (layer.renderer.infos && (layer.renderer.infos.length >
-              0)) {
-          for (i = 0; i < layer.renderer.infos.length; i++) {
-            if (layer.typeIdField) {
-              graphicInfoValue = graphic.attributes[layer.typeIdField];
-            } else if (layer.renderer.attributeField) {
-              graphicInfoValue = graphic.attributes[layer.renderer.attributeField];
-            }
-            layerInfoValue = layer.renderer.infos[i].value;
-            // To get properties of symbol when infos contains other than class break renderer.
-            if (graphicInfoValue !== undefined && graphicInfoValue !==
+          } else if (layer.renderer.infos && (layer.renderer.infos.length >
+            0)) {
+            for (i = 0; i < layer.renderer.infos.length; i++) {
+              if (layer.typeIdField) {
+                graphicInfoValue = graphic.attributes[layer.typeIdField];
+              } else if (layer.renderer.attributeField) {
+                graphicInfoValue = graphic.attributes[layer.renderer.attributeField];
+              }
+              layerInfoValue = layer.renderer.infos[i].value;
+              // To get properties of symbol when infos contains other than class break renderer.
+              if (graphicInfoValue !== undefined && graphicInfoValue !==
                 null && graphicInfoValue !== "" && layerInfoValue !==
                 undefined && layerInfoValue !== null && layerInfoValue !==
                 "") {
-              if (graphicInfoValue.toString() === layerInfoValue.toString()) {
+                if (graphicInfoValue.toString() === layerInfoValue.toString()) {
+                  isSymbolFound = true;
+                  symbol = this._updatePointSymbolProperties(symbol,
+                    layer.renderer.infos[i].symbol);
+                }
+              }
+            }
+            if (!isSymbolFound) {
+              if (layer.renderer.defaultSymbol) {
                 isSymbolFound = true;
                 symbol = this._updatePointSymbolProperties(symbol,
-                    layer.renderer.infos[i].symbol);
+                  layer.renderer.defaultSymbol);
               }
             }
           }
-          if (!isSymbolFound) {
-            if (layer.renderer.defaultSymbol) {
-              isSymbolFound = true;
-              symbol = this._updatePointSymbolProperties(symbol,
-                  layer.renderer.defaultSymbol);
-            }
-          }
         }
+        point = new Point(graphic.geometry.x, graphic.geometry.y, new SpatialReference({
+          wkid: graphic.geometry.spatialReference.wkid
+        }));
+        graphics = new Graphic(point, symbol, graphic.attributes);
       }
-      point = new Point(graphic.geometry.x, graphic.geometry.y, new SpatialReference({
-        wkid: graphic.geometry.spatialReference.wkid
-      }));
-      graphics = new Graphic(point, symbol, graphic.attributes);
       return graphics;
     },
 
@@ -661,7 +795,7 @@ function (
     _updatePointSymbolProperties: function (symbol, layerSymbol) {
       var height, width, size;
       if (layerSymbol.hasOwnProperty("height") && layerSymbol.hasOwnProperty(
-            "width")) {
+        "width")) {
         height = layerSymbol.height;
         width = layerSymbol.width;
         // To display cross hair properly around feature its size needs to be calculated
@@ -681,6 +815,73 @@ function (
         symbol.yoffset = layerSymbol.yoffset;
       }
       return symbol;
+    },
+
+    /**
+    * This function is used to get symbol for polyline geometry
+    * @param{object} selected feature which needs to be highlighted
+    * @param{object} details of selected layer
+    */
+    _getPolyLineSymbol: function (graphic, layer) {
+      var symbol, graphics, polyline, symbolWidth, graphicInfoValue, layerInfoValue, i;
+      symbolWidth = 5; // default line width
+      //check if layer is valid and have valid renderer object then only check for other  symbol properties
+      if (layer && layer.renderer) {
+        if (layer.renderer.symbol && layer.renderer.symbol.hasOwnProperty("width")) {
+          symbolWidth = layer.renderer.symbol.width;
+        } else if ((layer.renderer.infos) && (layer.renderer.infos.length > 0)) {
+          for (i = 0; i < layer.renderer.infos.length; i++) {
+            if (layer.typeIdField) {
+              graphicInfoValue = graphic.attributes[layer.typeIdField];
+            } else if (layer.renderer.attributeField) {
+              graphicInfoValue = graphic.attributes[layer.renderer.attributeField];
+            }
+            layerInfoValue = layer.renderer.infos[i].value;
+            // To get properties of symbol when infos contains other than class break renderer.
+            if (graphicInfoValue !== undefined && graphicInfoValue !== null &&
+              graphicInfoValue !== "" && layerInfoValue !== undefined &&
+              layerInfoValue !== null && layerInfoValue !== "") {
+              if (graphicInfoValue.toString() === layerInfoValue.toString() &&
+                layer.renderer.infos[i].symbol.hasOwnProperty("width")) {
+                symbolWidth = layer.renderer.infos[i].symbol.width;
+              }
+            }
+          }
+        } else if (layer.renderer.defaultSymbol && layer.renderer.defaultSymbol
+          .hasOwnProperty("width")) {
+          symbolWidth = layer.renderer.defaultSymbol.width;
+        }
+      }
+      symbol = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color(
+        this.config.highlightColor), symbolWidth);
+      polyline = new Polyline(new SpatialReference({
+        wkid: graphic.geometry.spatialReference.wkid
+      }));
+      if (graphic.geometry.paths && graphic.geometry.paths.length > 0) {
+        polyline.addPath(graphic.geometry.paths[0]);
+      }
+      graphics = new Graphic(polyline, symbol, graphic.attributes);
+      return graphics;
+    },
+
+    /**
+    * This function is used to get symbol for polygon geometry
+    * @param{object} selected feature which needs to be highlighted
+    * @param{object} details of selected layer
+    */
+    _getPolygonSymbol: function (graphic) {
+      var symbol, graphics, polygon;
+      symbol = new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID, new SimpleLineSymbol(
+        SimpleLineSymbol.STYLE_SOLID, new Color(this.config.highlightColor), 4), new Color(
+        [0, 0, 0, 0]));
+      polygon = new Polygon(new SpatialReference({
+        wkid: graphic.geometry.spatialReference.wkid
+      }));
+      if (graphic.geometry.rings) {
+        polygon.rings = lang.clone(graphic.geometry.rings);
+      }
+      graphics = new Graphic(polygon, symbol, graphic.attributes);
+      return graphics;
     },
 
     /* End Of Section For Highlighting Selected Point Feature */

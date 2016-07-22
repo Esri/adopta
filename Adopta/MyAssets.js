@@ -41,7 +41,7 @@
     myAssets: null,
     _primaryAction: null,
     _updateLayerTimer: null,
-    _actionPerformed: [],
+    _actionPerformed: {},
     _selectedAsset: null,
     constructor: function (options) {
       lang.mixin(this, options);
@@ -77,6 +77,8 @@
           }
         }), 100);
       })));
+      domAttr.set(this.selecetAssetSection, "innerHTML", jimuUtils.sanitizeHTML(
+        this.config.selectAssetMsg));
     },
 
     /**
@@ -144,7 +146,8 @@
     * @memberOf widgets/Adopta/MyAssets
     **/
     createMyAssets: function () {
-      var item, i, itemHighlighter, itemTitle, itemActionButton;
+      var item, i, itemHighlighter, itemTitle, itemActionText, itemActionButton,
+      itemActionImage, itemActionContainer, objectId;
       //clear previously added my assets
       domConstruct.empty(this.myAssetsSection);
       if (this.myAssets && this.myAssets.length > 0) {
@@ -153,26 +156,42 @@
           item = domConstruct.create("div", {
             "class": "esriCTListItem"
           }, this.myAssetsSection);
+
+          objectId = this.myAssets[i].attributes[this.layer.objectIdField];
           if (this._primaryAction) {
+            itemActionContainer = domConstruct.create("div", {
+              "class": "esriCTItemActionContainer"
+            }, item);
+            itemActionText = domConstruct.create("div", {
+              "innerHTML": jimuUtils.sanitizeHTML(this._primaryAction.name),
+              "title": jimuUtils.sanitizeHTML(this._primaryAction.name),
+              "class": "esriCTItemActionText esriCTEllipsis"
+            }, itemActionContainer);
+            itemActionButton = domConstruct.create("div", {
+              "class": "esriCTPrimaryActionImageContainer"
+            }, itemActionContainer);
             //if action is already performed, remove button and add green check image
-            if (this._actionPerformed.indexOf(this.myAssets[i].attributes
-            [this.layer.objectIdField]) !== -1) {
-              itemActionButton = domConstruct.create("div", {
-                "class": "esriCTGreenCheck esriCTActionPerformed"
-              }, item);
+            if (this._actionPerformed.hasOwnProperty(objectId) &&
+              this._actionPerformed[objectId].indexOf(this._primaryAction.name) !== -1) {
+              domClass.add(itemActionContainer, "esriCTActionPerformed");
+              itemActionImage = domConstruct.create("img", {
+                "class": "esriCTimageDimensions"
+              }, itemActionButton);
+              // fetch image data/url
+              this._createImageFromData(this.config.afterActionImage, itemActionImage);
             } else {
-              itemActionButton = domConstruct.create("div", {
-                "class": "esriCTListItemActionButton jimu-btn"
-              }, item);
-              domAttr.set(itemActionButton, "innerHTML",
-                jimuUtils.sanitizeHTML(this._primaryAction.name));
-              domAttr.set(itemActionButton, "title", this._primaryAction.name);
+              itemActionImage = domConstruct.create("img", {
+                "class": "esriCTimageDimensions"
+              }, itemActionButton);
+              // fetch image data/url
+              this._createImageFromData(this.config.beforeActionImage, itemActionImage);
+              domClass.remove(itemActionContainer, "esriCTActionPerformed");
             }
             //set attributes to div which can be used to fetch feature from myAsset array
-            domAttr.set(itemActionButton, "assetId", i);
+            domAttr.set(itemActionContainer, "assetId", i);
             //set action attribute to action button
-            domAttr.set(itemActionButton, "action", this._primaryAction.name);
-            this.own(on(itemActionButton, "click", lang.hitch(this, this.performAction)));
+            domAttr.set(itemActionContainer, "action", this._primaryAction.name);
+            this.own(on(itemActionContainer, "click", lang.hitch(this, this.performAction)));
           }
           itemHighlighter = domConstruct.create("div", {
             "class": "esriCTListItemHighlight"
@@ -202,11 +221,50 @@
       }
     },
 
+    _createImageFromData : function (action, imageNode) {
+      var baseURL, imageSrc;
+      if (action) {
+        if (action.imageData.indexOf("${appPath}") > -1) {
+          baseURL = location.href.slice(0, location.href.lastIndexOf(
+            '/'));
+          imageSrc = string.substitute(action.imageData, {
+            appPath: baseURL
+          });
+        } else {
+          imageSrc = action.imageData;
+        }
+      }
+      domAttr.set(imageNode, "src", imageSrc);
+    },
+
     /**
     * Update feature symbol
     * @memberOf widgets/Adopta/MyAssets
     **/
     _updateSymbol: function (feature) {
+      var baseURL;
+      if (feature.geometry.type === "point") {
+        //Check for "${appPath} and replace it with application base url"
+        if (this.config.myAssetSymbol.imageData.indexOf("${appPath}") > -1) {
+          baseURL = location.href.slice(0, location.href.lastIndexOf(
+            '/'));
+          this.config.myAssetSymbol.url = string.substitute(
+            this.config.myAssetSymbol.imageData, {
+              appPath: baseURL
+            });
+          this.config.myAssetSymbol.imageData = "";
+          //Check for "${apps}" and then append base url
+        } else if (this.config.myAssetSymbol.imageData.indexOf("apps") > -1) {
+          baseURL = location.href.split('/webappbuilder');
+          this.config.myAssetSymbol.url = baseURL[0] + this.config.myAssetSymbol.imageData;
+          this.config.myAssetSymbol.imageData = "";
+        }
+        //Check if imageData contains ',', then split and use the appropriate string
+        if (this.config.myAssetSymbol.imageData && this.config.myAssetSymbol.imageData
+          .indexOf(",") > -1) {
+          this.config.myAssetSymbol.imageData = this.config.myAssetSymbol.imageData.split(",")[1];
+        }
+      }
       var symbol = symbolJsonUtils.fromJson(this.config.myAssetSymbol);
       feature.setSymbol(symbol);
     },
@@ -327,15 +385,15 @@
       if (this._primaryAction) {
         if (this._primaryAction.name === actionName) {
           //if selected action is performed on my asset
-          if (this._actionPerformed && this._actionPerformed.indexOf(objectId) === -1) {
+          if (this._actionPerformed && !this._actionPerformed.hasOwnProperty(objectId)) {
             this._actionPerformed.push(objectId);
           }
         }
 
         //If asset is abandoned, remove it from the actionPerformed array
-        if (this._actionPerformed && this._actionPerformed.indexOf(objectId) !== -1 &&
+        if (this._actionPerformed && this._actionPerformed.hasOwnProperty(objectId) &&
           actionName === this.config.actions.unAssign.name) {
-          this._actionPerformed.splice(this._actionPerformed.indexOf(objectId), 1);
+          delete this._actionPerformed[objectId];
           this._selectedAsset = null;
         } else if (actionName === this.config.actions.unAssign.name) {
           this._selectedAsset = null;
@@ -410,7 +468,7 @@
       }
       //if some action exist in url but not performed then show error msg
       if (actionName && !isActionPerformed) {
-        this.emit("showMessage", string.substitute(this.nls.unableToPerformAction,
+        this.emit("showMessage", string.substitute(this.config.unableToPerformAction,
           { actionName: actionName }));
       }
     }

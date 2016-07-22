@@ -73,7 +73,6 @@ from email.mime.text import MIMEText
 from smtplib import SMTP
 import arcpy
 #------------------------------------------------------------------------------#
-
 # used in login email when no assets are adopted
 no_assets_message = "No assets adopted yet"
 # read gp parameters
@@ -109,17 +108,17 @@ url_usertoken = arcpy.GetParameterAsText(27)
 ########################################################################
 class fieldReplace():
     _name = ""
-    _length = 0    
+    _length = 0
     def __init__(self, name, length = 0, **kwargs):
         self._name = name
         self._length = length
-        
+
     @property
     def name(self):
-        return self._name        
+        return self._name
     @property
     def length(self):
-        return self._length               
+        return self._length
 class describeReplace():
     _hasGlobalID = True
     _globalIdField = "GlobalID"
@@ -127,7 +126,7 @@ class describeReplace():
     _path = ""
     _fields = []
     def __init__(self):
-        
+
         import os
         self._path, name = os.path.split(user_table)
         self._fields.append(fieldReplace(**{"name":'OBJECTID',"length":"4"}))
@@ -141,7 +140,7 @@ class describeReplace():
 
     @property
     def hasGlobalID(self):
-        return self._hasGlobalID    
+        return self._hasGlobalID
     @property
     def globalIDFieldName(self):
         return self._globalIdField
@@ -150,10 +149,10 @@ class describeReplace():
         return self._isVersioned
     @property
     def path(self):
-        return self._path    
+        return self._path
     @property
     def fields(self):
-        return self._fields     
+        return self._fields
 def send_msg(message, messagetype="message",):
     """ output messages to stdout as well as arcpy """
     if messagetype.lower() == "message":
@@ -174,8 +173,6 @@ def send_msg(message, messagetype="message",):
         arcpy.SetParameterAsText(28, out_message)
     print message
 
-# validate input email address
-
 def validate_user_table(userTableDescribe):
     """ validates user table schema requirements """
     # do these checks only when run in desktop while publishing
@@ -190,7 +187,7 @@ def validate_user_table(userTableDescribe):
     if not userTableDescribe.hasGlobalID:
         send_msg("User table does not have globalids enabled.", "error")
         return False
-   
+
     upperPath = userTableDescribe.path.upper()
     if ('.SDE' in upperPath or '.GDS' in upperPath):
         return True
@@ -209,7 +206,7 @@ def initialize_securityhandler(url, username, password):
     """ initialize AGOL/Portal security handler """
     try:
         from arcrest.security import AGOLTokenSecurityHandler
-        from arcrest.security import PortalTokenSecurityHandler        
+        from arcrest.security import PortalTokenSecurityHandler
         # if user has provided credentials
         if len(username) > 0 and len(password) > 0:
             # check if its AGOL or Portal
@@ -258,7 +255,7 @@ def email_exists(userTableDescribe, input_email, check_token_validity=False):
         with arcpy.da.SearchCursor(in_table=user_table,
                                    field_names=[user_email_field, token_date_field],
                                    where_clause=where_clause) as cursor:
-            
+
             rows = [i for i in cursor]
             rowcount = len(rows)
             # return true in signup case
@@ -276,7 +273,7 @@ def email_exists(userTableDescribe, input_email, check_token_validity=False):
                 if rowcount != 1:
                     # user does not exist
                     return False
-             
+
                 token_time = rows[0][1]
                 if token_time in [None, ""]:
                     raise Exception("No token date recorded to verify validity.")
@@ -302,37 +299,38 @@ def validate_url_token(userTableDescribe):
     userid = "{"+url_userid+"}"
     usertoken = "{"+url_usertoken+"}"
     # get globalid fieldname
-  
+
     globalid_field = userTableDescribe.globalIDFieldName
-    # match userid and usertoken pair
-    where_clause = "{0}='{1}' AND {2}='{3}'".format(globalid_field, userid.upper(),
-                                                    user_token_field, usertoken)
+    # get user from userid
+    where_clause = "{0}='{1}'".format(globalid_field, userid.upper())
     rowcount = 0
     try:
         with arcpy.da.SearchCursor(in_table=user_table,
-                                   field_names=[user_email_field, token_date_field],
+                                   field_names=[user_email_field, token_date_field,
+                                   user_token_field],
                                    where_clause=where_clause) as cursor:
             rows = [i for i in cursor]
             rowcount = len(rows)
             if rowcount == 0:
-                send_msg("Userid and usertoken do not match.", "error")
+                # could not find a match for supplied userid in url param
+                send_msg("Invalid userid", "error")
                 return
             elif rowcount == 1:
-               
+                token_match = True if str(rows[0][2]).lower() == usertoken.lower() else False
                 token_time = rows[0][1]
                 if token_time in [None, ""]:
                     raise Exception("No token date recorded to verify validity.")
                 delta = datetime.datetime.utcnow() - token_time
                 validity = timedelta(minutes=int(token_expiry_minutes))
                 isvalid = delta < validity
-                if isvalid or int(token_expiry_minutes) == 0:
+                if isvalid and token_match or int(token_expiry_minutes) == 0:
                     # return email address
                     # if expiration is set to 0  minutes, tokens never expire
                     emailid = {"email":str(rows[0][0])}
                     send_msg(emailid, "success")
                     return True
                 else:
-                    # update token
+                    # update expired token
                     update_usertoken(userTableDescribe, expired_email=str(rows[0][0]))
                     send_msg("Updating token for {0}".format(rows[0][0]))
                     process_login(userTableDescribe, email_address=str(rows[0][0]))
@@ -346,7 +344,7 @@ def validate_url_token(userTableDescribe):
 def update_usertoken(userTableDescribe, expired_email=""):
     """ updates expired usertoken and tokendate """
     try:
-       
+
         # is the table versioned?
         is_versioned = userTableDescribe.isVersioned
         # get workspace
@@ -384,7 +382,7 @@ def update_usertoken(userTableDescribe, expired_email=""):
         edit.stopOperation()
         # Stop the edit session and save the changes
         edit.stopEditing(True)
-        
+
         return userid, usertoken
 
     except Exception as e:
@@ -421,25 +419,24 @@ def validate_newuser_signupfields(userTableDescribe):
                     del in_fields[field]
         if fldFound == False:
             del in_fields[field]
-                
-
     send_msg(in_fields)
     return in_fields
+
 def checkFieldCase(table_fields, fields):
-    
+
     for field in fields:
         fldFound = False
         for db_field in table_fields:
             if db_field.name.upper() == field.upper():
                 fldFound = True
-                
+
                 if db_field.name != field:
                     fields[db_field.name] = fields[field]
                     del fields[field]
         if fldFound == False:
             del fields[field]
     return fields
-    
+
 def add_user(userTableDescribe):
     """ adds user to geodatabase using email and signup fields """
     fields = validate_newuser_signupfields(userTableDescribe)
@@ -449,10 +446,10 @@ def add_user(userTableDescribe):
     fields.update({user_token_field: "{"+str(uuid4())+"}"})
     # add current time when token was generated
     fields.update({token_date_field:datetime.datetime.utcnow()})
-   
+
     # check email field length
     try:
-        
+
         table_fields = userTableDescribe.fields
         fields = checkFieldCase(table_fields, fields=fields)
         email_field = []
@@ -471,7 +468,7 @@ def add_user(userTableDescribe):
     # insert row in geodatabase
     try:
 
-       
+
         # is the table versioned?
         is_versioned = userTableDescribe.isVersioned
         # get workspace
@@ -494,13 +491,13 @@ def add_user(userTableDescribe):
         edit.stopOperation()
         # Stop the edit session and save the changes
         edit.stopEditing(True)
-      
+
         return userid, usertoken
 
     except Exception as e:
         send_msg("Error occurred while adding user to geodatabase. Error: {0}".format(str(e)),
                  "error")
-        if edit.isEditing:        
+        if edit.isEditing:
             if edit.isEditing:
                 edit.stopOperation()
                 edit.stopEditing(False)
@@ -684,7 +681,7 @@ def get_configuredactions(wconfig):
 def get_userid_usertoken(userTableDescribe,email_address=input_user_email):
     """ returns userid, usertoken of existing user """
     try:
-       
+
         globalid_field = userTableDescribe.globalIDFieldName
         where_clause = "UPPER({0})='{1}'".format(user_email_field, email_address.upper())
         with arcpy.da.SearchCursor(in_table=user_table,
@@ -758,7 +755,7 @@ def send_email(email_body, email_address):
         return False
 
 def process_signup(userTableDescribe):
-    
+
     """ process signup operation """
     email_status = email_exists(userTableDescribe, input_email=input_user_email, check_token_validity=False)
     if email_status is True:
@@ -790,14 +787,14 @@ def process_login(userTableDescribe, email_address):
         return
     elif email_status is None:
         return
-    
+
     # initialize AGOL/Portal security handler
     agol_sh = initialize_securityhandler(assetlyr_portalurl,
                                          assetlyr_username,
                                          assetlyr_password)
     if agol_sh is False:
         return
-    
+
     # initialize user table
     asset_layer = initialize_featurelayer(layer_url=assetlyr_url,
                                           agol_sh=agol_sh)
@@ -816,7 +813,7 @@ def process_login(userTableDescribe, email_address):
     if not asset_titlefields:
         return
     # get adopted asset features
-    assets = get_adopted_assets(asset_layer, userid, wconfig, asset_titlefields)    
+    assets = get_adopted_assets(asset_layer, userid, wconfig, asset_titlefields)
     # get configured actions
     actions = get_configuredactions(wconfig)
     # prepare html table containing adopted assets with action links
@@ -832,7 +829,7 @@ def return_unique_teamnames(userTableDescribe):
     # out message format
     team_result = {"teamfield":{}, "features":[]}
     # if no team field configured, send empty response
-    
+
     if len(user_team_field) == 0:
         team_result["teamfield"] = None
         send_msg(team_result, "success")
@@ -841,7 +838,7 @@ def return_unique_teamnames(userTableDescribe):
     if len(user_team_field) > 0:
         try:
             field_info = [f for f in userTableDescribe.fields if f.name.upper() == user_team_field.upper()]
-            
+
             if len(field_info) == 0:
                 send_msg(team_result, "success")
                 return
@@ -854,7 +851,7 @@ def return_unique_teamnames(userTableDescribe):
                                         "nullable": str(field_info.isNullable),
                                         "default": str(field_info.defaultValue)
                                        }
-            
+
             # find unique names in team field
             rowcount = 0
             with arcpy.da.SearchCursor(in_table=user_table, field_names=field_info.name,
@@ -916,9 +913,9 @@ def validate_inputs():
 
 def main():
     """ main function """
-    #userTableDescribe = describeReplace()#arcpy.Describe(user_table)    
-    userTableDescribe = arcpy.Describe(user_table)    
-    
+    #userTableDescribe = describeReplace()#arcpy.Describe(user_table)
+    userTableDescribe = arcpy.Describe(user_table)
+
     # validate inputs for actions
     if not validate_inputs():
         return
@@ -927,7 +924,7 @@ def main():
         return
     # return unique team names
     if action.lower() == "teams":
-        
+
         return_unique_teamnames(userTableDescribe)
 
     # validate if user exists and token is valid
@@ -940,7 +937,7 @@ def main():
 
     if action.lower() == "login":
         process_login(userTableDescribe, email_address=input_user_email)
-        
+
 if __name__ == '__main__':
     main()
 

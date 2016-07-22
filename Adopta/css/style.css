@@ -142,10 +142,27 @@
     text-align: center;
 }
 
+.jimu-widget-Adopta .esriCTBtnContainer
+{
+    line-height: 40px;
+    width: 30px;
+    float: right;
+}
+
 .jimu-widget-Adopta .esriCTStaticWidth
 {
-    width: 60% !important;
-    margin-bottom: 15px;
+    width: 80%;
+    float: left;
+    line-height: 40px;
+    text-align: left;
+    font-weight: bold;
+    min-width: 135px;
+}
+
+.esriRtl .jimu-widget-Adopta .esriCTStaticWidth
+{
+    float: right;
+    text-align: right;
 }
 
 .jimu-widget-Adopta .esriCTDisabledAdoptButton
@@ -177,22 +194,38 @@
     float: left;
 }
 
-.jimu-widget-Adopta .esriCTAssetDetailsGreenCheck
+.jimu-widget-Adopta .esriCTAssetDetailsImageDimensions
 {
-    background-image: url(../images/green-check.png);
     background-position: center;
     background-size: 28px;
     background-repeat: no-repeat;
     height: 28px;
     width: 28px;
     display: inline-block;
+    vertical-align: middle;
 }
+
 
 .jimu-widget-Adopta .esriCTActionPerformedContainer
 {
-    width: 100%;
+    width: 75%;
+    line-height: 40px;
+    margin: auto;
+}
+
+.jimu-widget-Adopta .esriCTRegisteredUser
+{
+    float: right;
+    margin-top: 10px;
+    margin-right: 10px;
+    color: rgb(0, 122, 194);
+    cursor: pointer;
+}
+
+.esriRtl .jimu-widget-Adopta .esriCTRegisteredUser {
     float: left;
-    margin-bottom: 15px;
+    margin-left: 10px;
+    margin-right: auto;
 }
 
 /*------------------------- End of styles for widget panel -----------------------*/
@@ -292,20 +325,55 @@
      float:left;
 }
 
-.jimu-widget-Adopta .esriCTGreenCheck
+.jimu-widget-Adopta .esriCTimageDimensions
 {
-     background-image: url(../images/green-check.png);
      background-position:center;
      background-size:28px;
      background-repeat:no-repeat;
      height:28px;
      width: 28px;
      float: right;
-     margin: 7px 30px 0 0;
+     margin: 7px 0 0 5px;
 }
 
-.esriRtl .jimu-widget-Adopta .esriCTGreenCheck{
+.esriRtl .jimu-widget-Adopta .esriCTimageDimensions
+{
+     margin: 7px 5px 0 0;
+}
+
+.esriRtl .jimu-widget-Adopta .esriCTGreenCheck
+{
     float:left;
+}
+
+.jimu-widget-Adopta .esriCTItemActionContainer
+{
+    float: right;
+    max-width: 50%;
+}
+
+.esriRtl .jimu-widget-Adopta .esriCTItemActionContainer
+{
+    float: left;
+}
+
+.jimu-widget-Adopta .esriCTItemActionText
+{
+    float: left;
+    max-width: 75%;
+    font-weight: bold;
+}
+
+.esriRtl .jimu-widget-Adopta .esriCTItemActionText
+{
+    float: right;
+    text-align: left;
+}
+
+.jimu-widget-Adopta .esriCTPrimaryActionImageContainer
+{
+    height: 42px;
+    float: right;
 }
 /*------------------------- Overridden dojo Styles -----------------------*/
 /*Hide arrow node for team autocomplete box*/

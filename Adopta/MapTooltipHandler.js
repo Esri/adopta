@@ -78,7 +78,7 @@
       //create tool-tip to be shown on map move
       this._mapTooltip = domConstruct.create("div", {
         "class": "tooltip",
-        "innerHTML": this.nls.selectAssetToolTipBeforeLogin
+        "innerHTML": this.config.selectAssetToolTipBeforeLogin
       }, this.map.container);
       domStyle.set(this._mapTooltip, "position", "fixed");
       domStyle.set(this._mapTooltip, "display", "none");
@@ -143,7 +143,7 @@
     * @memberOf widgets/Adopta/MapTooltipHandler
     **/
     updateTooltip: function () {
-      this._mapTooltip.innerHTML = this.nls.selectAssetToolTipAfterLogin;
+      this._mapTooltip.innerHTML = this.config.selectAssetToolTipAfterLogin;
     }
 
   });
