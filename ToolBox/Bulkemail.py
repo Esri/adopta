@@ -521,12 +521,12 @@ def prepare_emailbody(user, action_links):
                             user["user_guid"],
                             user["user_token"]))
     else:
-        send_msg("{{LoginLink}} keyword not found in email template.", "error")
+        send_msg("{{LoginLink}} keyword not found in email template.", "warning")
     # substitute the list of adopted assets
     if '{{AdoptedAssets}}' in body:
         body = body.replace('{{AdoptedAssets}}', action_links)
     else:
-        send_msg("{{AdoptedAssets}} keyword not found in email template", "error")
+        send_msg("{{AdoptedAssets}} keyword not found in email template", "warning")
     return body
 
 def get_usertoken(email_address=None):
