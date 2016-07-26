@@ -688,7 +688,7 @@ def process_signup(userTableDescribe):
             return
         email_body = prepare_signup_email(userid, usertoken)
         try:
-            send_email.send(subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [input_user_email])
+            send_email.send(signup_email_subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [input_user_email])
             send_msg("Sent email", "success")
         except Exception as e:
             send_msg("Failure in sending email. {0}".format(str(e)), "error")
@@ -743,7 +743,7 @@ def process_login(userTableDescribe, email_address):
     email_body = prepare_login_email(html_table, userid, usertoken)
     # send the login email
     try:
-        send_email.send(subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [email_address])
+        send_email.send(login_email_subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [email_address])
         send_msg("Sent email", "success")
     except Exception as e:
         send_msg("Failure in sending email. {0}".format(str(e)), "error")
