@@ -104,53 +104,7 @@ url_userid = arcpy.GetParameterAsText(26)
 url_usertoken = arcpy.GetParameterAsText(27)
 
 ########################################################################
-class fieldReplace():
-    _name = ""
-    _length = 0
-    def __init__(self, name, length = 0, **kwargs):
-        self._name = name
-        self._length = length
 
-    @property
-    def name(self):
-        return self._name
-    @property
-    def length(self):
-        return self._length
-class describeReplace():
-    _hasGlobalID = True
-    _globalIdField = "GlobalID"
-    _isVersioned = False
-    _path = ""
-    _fields = []
-    def __init__(self):
-
-        import os
-        self._path, name = os.path.split(user_table)
-        self._fields.append(fieldReplace(**{"name":'OBJECTID',"length":"4"}))
-        self._fields.append(fieldReplace(**{"name":'EMAIL',"length":"70"}))
-        self._fields.append(fieldReplace(**{"name":'TEAM',"length":"35"}))
-        self._fields.append(fieldReplace(**{"name":'FIRSTNAME',"length":"35"}))
-        self._fields.append(fieldReplace(**{"name":'LASTNAME',"length":"35"}))
-        self._fields.append(fieldReplace(**{"name":'GlobalID',"length":"0"}))
-        self._fields.append(fieldReplace(**{"name":'USERTOKEN',"length":"0"}))
-        self._fields.append(fieldReplace(**{"name":'TOKENDATE',"length":"0"}))
-
-    @property
-    def hasGlobalID(self):
-        return self._hasGlobalID
-    @property
-    def globalIDFieldName(self):
-        return self._globalIdField
-    @property
-    def isVersioned(self):
-        return self._isVersioned
-    @property
-    def path(self):
-        return self._path
-    @property
-    def fields(self):
-        return self._fields
 def send_msg(message, messagetype="message",):
     """ output messages to stdout as well as arcpy """
     if messagetype.lower() == "message":
