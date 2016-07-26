@@ -123,7 +123,7 @@ def send_msg(message, messagetype="message",):
         # set the result_output parameter in case of success
         out_message = {"status":"Success", "description":message}
         arcpy.SetParameterAsText(28, out_message)
-    print message
+    print(message)
 
 def validate_user_table(userTableDescribe):
     """ validates user table schema requirements """
@@ -434,8 +434,8 @@ def add_user(userTableDescribe):
         edit.startOperation()
         # insert row for new user
         with arcpy.da.InsertCursor(in_table=user_table,
-                                   field_names=fields.keys()) as cursor:
-            oid = cursor.insertRow(fields.values())
+                                   field_names=list(fields.keys())) as cursor:
+            oid = cursor.insertRow(list(fields.values()))
         send_msg("User: {0} added with oid: {1}".format(input_user_email, oid))
         # return userid-globalid and usertoken-guid
         userid, usertoken = get_userid_usertoken(userTableDescribe, input_user_email)
