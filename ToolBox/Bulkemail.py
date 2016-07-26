@@ -519,7 +519,7 @@ def prepare_emailbody(user, action_links):
     # substitute the login link
     if '{{LoginLink}}' in body:
         body = body.replace('{{LoginLink}}',
-                            "<a href={0}?userid={1}&usertoken={2}>Login</a>".format( \
+                            "{0}?userid={1}&usertoken={2}".format( \
                             clean_app_url(),
                             user["user_guid"],
                             user["user_token"]))

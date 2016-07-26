@@ -473,13 +473,13 @@ def generate_login_link(userid, usertoken):
     # generate appurl
     if len(adopted_assetid) > 0:
         # assign asset to user who tried to adopt before signing up or logging in
-        template = "<a href={0}userid={1}&usertoken={2}&assign={3}>Login</a>"
+        template = "{0}userid={1}&usertoken={2}&assign={3}"
         # userid-globalid should be converted to lowercase as it is written to
         # asset layer in a guid field which converts it to lowercase
         login_link = template.format(get_base_appurl(), userid.lower(), usertoken, adopted_assetid)
         return login_link
     else:
-        template = "<a href={0}userid={1}&usertoken={2}>Login</a>"
+        template = "{0}userid={1}&usertoken={2}"
         login_link = template.format(get_base_appurl(), userid.lower(), usertoken)
         return login_link
 
