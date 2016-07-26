@@ -479,14 +479,12 @@ def get_asset_title(asset, asset_titlefields):
 def prepare_actionlinks(adopter, actions, asset_titlefields):
     """ Prepare html table of adopted assets """
     # start html table
-    html_table = """<table style="border: 1px solid #ccc; border-collapse: collapse;" """\
-                 """ cellspacing="0" cellpadding="10">"""
+    html_table = "<table>"
     # add row in html table for each asset
     for asset in adopter["assets"]:
         asset_title = get_asset_title(asset, asset_titlefields)
         # add asset title table cell
-        title_template = """<tr> <td style="border: 1px solid #ccc; border-collapse: collapse;" """\
-                         """ cellspacing="0" cellpadding="10">{0}</td>"""
+        title_template = "<tr><td>{0}</td>"
         html_table = html_table + title_template.format(asset_title)
         # link_template indexes
         # 0 - app url
@@ -495,9 +493,7 @@ def prepare_actionlinks(adopter, actions, asset_titlefields):
         # 3 - urlparam
         # 4 - objectid
         # 5 - action name
-        link_template = """<td style="border: 1px solid #ccc; border-collapse: collapse;" """ \
-                        """ cellspacing="0" cellpadding="10">""" \
-                        """ <a href={0}?userid={1}&usertoken={2}&{3}={4}>{5}</a></td>"""
+        link_template = '<td><a href="{0}?userid={1}&usertoken={2}&{3}={4}">{5}</a></td>'
         for action in actions:
             # generate action links for each configured action
             actionlink = link_template.format( \
@@ -511,6 +507,7 @@ def prepare_actionlinks(adopter, actions, asset_titlefields):
             html_table = html_table + actionlink
         # close the table row for this asset
         html_table = html_table + "</tr>"
+    html_table = html_table + "</table>"
     return html_table
 
 def prepare_emailbody(user, action_links):
@@ -681,7 +678,7 @@ def main():
             # prepare email body
             email_body = prepare_emailbody(user, action_links)
             try:
-                send_email.send(subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [user["email"]])
+                send_email.send(email_subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [user["email"]])
                 sent.append(user["email"])
             except Exception as e:
                 send_msg("Failure in sending email. {0}".format(str(e)), "error")

@@ -560,14 +560,12 @@ def prepare_html_table(assets, userid, usertoken, actions, asset_titlefields):
 
     if len(assets) > 0:
         # start html table
-        html_table = """<table style="border: 1px solid #ccc; border-collapse: collapse;" """ \
-                     """ cellspacing="0" cellpadding="10">"""
+        html_table = "<table>"
 
         for asset in assets:
             asset_title = get_asset_title(asset, asset_titlefields)
             # add asset title table cell
-            title_template = """<tr><td style="border: 1px solid #ccc; border-collapse: collapse;" """ \
-                             """ cellspacing="0" cellpadding="10">{0}</td>"""
+            title_template = "<tr><td>{0}</td>"
             html_table = html_table + title_template.format(asset_title)
             # add action link table cells
             # link_template indexes
@@ -577,9 +575,7 @@ def prepare_html_table(assets, userid, usertoken, actions, asset_titlefields):
             # 3 - urlparam
             # 4 - objectid
             # 5 - action name
-            link_template = """<td style="border: 1px solid #ccc; border-collapse: collapse;" """ \
-                            """ cellspacing="0" cellpadding="10"> """ \
-                            """<a href={0}userid={1}&usertoken={2}&{3}={4}>{5}</a></td>"""
+            link_template = '<td><a href="{0}userid={1}&usertoken={2}&{3}={4}>{5}"</a></td>'
             for actionitem in actions:
                 # generate action links for each configured action
                 actionlink = link_template.format( \
@@ -593,6 +589,7 @@ def prepare_html_table(assets, userid, usertoken, actions, asset_titlefields):
                 html_table = html_table + " " + actionlink
             # close the table row for this asset
             html_table = html_table + " </tr>"
+        html_table = html_table + "</table>"
         return html_table
 
 def prepare_login_email(html_table, userid, usertoken):
