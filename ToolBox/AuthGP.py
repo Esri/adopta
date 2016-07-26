@@ -68,10 +68,8 @@ from uuid import uuid4
 
 import datetime
 from datetime import timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from smtplib import SMTP
 import arcpy
+import send_email
 #------------------------------------------------------------------------------#
 # used in login email when no assets are adopted
 no_assets_message = "No assets adopted yet"
@@ -722,38 +720,6 @@ def get_adopted_assets(asset_layer, userid, wconfig, asset_titlefields):
         send_msg("Error in getting assets adopted by user. Error: {0}".format(str(e)), "error")
         return None
 
-def send_email(email_body, email_address):
-    """ send emails to adopters """
-    msg = MIMEMultipart()
-    msg['From'] = from_address
-    msg['To'] = email_address
-    if action.lower() == "signup":
-        msg['Subject'] = signup_email_subject
-    if action.lower() in ["login", "validate"]:
-        msg['Subject'] = login_email_subject
-    # Attach the email body
-    msg.attach(MIMEText(email_body, 'html'))
-    try:
-        server = SMTP(smtp_server)
-
-        if use_tls:
-            server.starttls()
-        server.ehlo()
-        if smtp_username != "" and smtp_password != "":
-            server.esmtp_features['auth'] = 'LOGIN'
-            server.login(smtp_username, smtp_password)
-
-        # send email to all adopters
-        messagebody = msg.as_string()
-        send_msg("Sending email to {0}".format(email_address))
-        server.sendmail(from_address, email_address, messagebody)
-        server.quit()
-        return True
-
-    except Exception as e:
-        send_msg("Failure in sending email. {0}".format(str(e)), "error")
-        return False
-
 def process_signup(userTableDescribe):
 
     """ process signup operation """
@@ -767,10 +733,11 @@ def process_signup(userTableDescribe):
         if userid is None and usertoken is None:
             return
         email_body = prepare_signup_email(userid, usertoken)
-        if send_email(email_body, input_user_email):
+        try:
+            send_email.send(subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [input_user_email])
             send_msg("Sent email", "success")
-        else:
-            return
+        except Exception as e:
+            send_msg("Failure in sending email. {0}".format(str(e)), "error")
     else:
         # an error occurred while verifying if email exists
         send_msg("Error occurred while verifying if email exists.", "error")
@@ -821,8 +788,11 @@ def process_login(userTableDescribe, email_address):
     # prepare the email body using login template
     email_body = prepare_login_email(html_table, userid, usertoken)
     # send the login email
-    if send_email(email_body, email_address):
+    try:
+        send_email.send(subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [email_address])
         send_msg("Sent email", "success")
+    except Exception as e:
+        send_msg("Failure in sending email. {0}".format(str(e)), "error")
 
 def return_unique_teamnames(userTableDescribe):
     """ return unique team names """

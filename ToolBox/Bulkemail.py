@@ -21,9 +21,6 @@ from uuid import uuid4
 from ast import literal_eval
 import datetime
 from datetime import timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from smtplib import SMTP
 try:
     # python 2
     import urlparse
@@ -37,6 +34,7 @@ from arcrest.agol import FeatureLayer
 from arcrest.common.geometry import Polygon
 from arcrest.common.filters import GeometryFilter
 import arcpy
+import send_email
 #------------------------------------------------------------------------------#
 
 # read tool input parameters
@@ -595,36 +593,6 @@ def update_usertoken(email_address=""):
             edit.stopEditing(False)
         return None
 
-def send_email(toemail, email_body):
-    """ send emails to adopters """
-    msg = MIMEMultipart()
-    msg['From'] = from_address
-    msg['To'] = toemail
-    msg['Subject'] = email_subject
-    if test_mode == "true":
-        msg['Subject'] = "Test Mode: " + email_subject
-    # Attach the email body
-    msg.attach(MIMEText(email_body, 'html'))
-    try:
-        server = SMTP(smtp_server)
-
-        if use_tls:
-            server.starttls()
-        server.ehlo()
-        if smtp_username != "" and smtp_password != "":
-            server.esmtp_features['auth'] = 'LOGIN'
-            server.login(smtp_username, smtp_password)
-
-        # send email to all adopters
-        messagebody = msg.as_string()
-        server.sendmail(from_address, toemail, messagebody)
-        server.quit()
-        return True
-
-    except Exception as e:
-        send_msg("Failure in sending email. {0}".format(str(e)), "error")
-        return False
-
 def main():
     """ main function """
     # validate inputs
@@ -696,9 +664,12 @@ def main():
                 action_links = prepare_actionlinks(user, actions, asset_titlefields)
                 # prepare email body
                 email_body = prepare_emailbody(user, action_links)
-                send_email(user["email"], email_body)
-                sent.append(user["email"])
-
+                try:
+                    send_email.send(email_subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [user["email"]])
+                    sent.append(user["email"])
+                except Exception as e:
+                    send_msg("Failure in sending email. {0}".format(str(e)), "error")
+                
         if test_mode == "false":
             # send email only to all users
             if int(token_expiry_minutes) != 0:
@@ -709,8 +680,11 @@ def main():
             action_links = prepare_actionlinks(user, actions, asset_titlefields)
             # prepare email body
             email_body = prepare_emailbody(user, action_links)
-            send_email(user["email"], email_body)
-            sent.append(user["email"])
+            try:
+                send_email.send(subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [user["email"]])
+                sent.append(user["email"])
+            except Exception as e:
+                send_msg("Failure in sending email. {0}".format(str(e)), "error")
 
     # set output result parameter
     if len(sent) > 0:
