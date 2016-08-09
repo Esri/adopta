@@ -1,0 +1,407 @@
+<div class="esriCTMainContainer" class="esriCTFullHeightWidth">
+	<div data-dojo-attach-point="tabDiv" class="esriCTFullHeight">
+		<!-- Layer Settings tab -->
+		<div data-dojo-attach-point="layerSettingsTabNode" class="esriCTFullHeight">
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel esriCTLabelContainer">
+					${nls.assetLayerLabel}
+				</div>
+				<div class="esriCTLayerField">
+					<div class="esriCTSelectedLayersDiv" data-dojo-attach-point="itemSelectDiv">
+					</div>
+					<div class="esriCTSetButton jimu-btn jimu-float-trailing" data-dojo-attach-point="setPrecinctLayerBtnNode">
+						${nls.btnSet}</div>
+					<div class="esriCTHint">
+						${nls.assetLayerHintText}
+					</div>
+				</div>
+			</div>
+
+			<!--Asset key field-->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.assetKeyFieldLabel}
+				</div>
+				<div class="esriCTLayerField">
+					<select class="esriCTAuthenticationGPService" data-dojo-type="dijit/form/Select" data-dojo-attach-point="foreignKeyFieldNode">
+                        </select>
+				</div>
+				<div class="esriCTHint">
+					${nls.assetKeyFieldHintText}
+				</div>
+			</div>
+			<!--Asset nickname field-->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.assetNicknameFieldLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<select class="esriCTAuthenticationGPService" data-dojo-type="dijit/form/Select" data-dojo-attach-point="nickNameFieldNode">
+                        </select>
+				</div>
+				<div class="esriCTHint">
+					${nls.assetNicknameFieldHintText}
+				</div>
+			</div>
+			<!--Auth GP service-->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel esriCTLabelContainer">${nls.authenticationGPServiceLabel}
+				</div>
+				<div class="esriCTLayerField">
+					<div data-dojo-type="dijit/form/ValidationTextBox" data-dojo-attach-point="txtURL" trim="true" required="true" disabled class="esriCTAuthenticationGPService">
+					</div>
+					<div class="esriCTSetButton jimu-btn jimu-float-trailing " title="${nls.btnSet}" data-dojo-attach-point="authenticationGPServiceNode">
+						${nls.btnSet}</div>
+
+					<div class="esriCTHint">
+						${nls.authenticationGPServiceHintText}
+					</div>
+				</div>
+			</div>
+			<!--Login screen message-->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTChartDescriptionDiv">
+					<div class="esriCTChartSettingLabel esriCTlabel">
+						${nls.loginScreenMessageLabel}
+					</div>
+				</div>
+				<div class="esriCTChartDescriptionDiv">
+					<div class="esriCTFieldInput editorDescriptionContainer">
+						<div class="editor-container" data-dojo-attach-point="editorContainer">
+							<div data-dojo-attach-point="editor">
+							</div>
+							<div class="esriCTHint">
+								${nls.loginScreenMessageHintText}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!--Additional field to dispalay in login screen-->
+			<div class="esriCTLayerContainer row">
+
+				<div class="esriCTlabel esriCTLabelContainer"> ${nls.additionalFieldDisplayLabel}
+				</div>
+				<div class="jimu-float-trailing esriCTAddnewClicked">
+					<div class="add-with-icon" data-dojo-attach-event="onclick:_onAddFieldClicked">
+						<span class="jimu-icon jimu-icon-add"></span><span class="add-label">
+							${nls.addFieldLabelText}</span>
+					</div>
+				</div>
+				<div class="esriCTParentTableField">
+					<div class="esriCTadditionalFieldTable" data-dojo-attach-point="additionalFieldTableNode">
+					</div>
+					<div class="esriCTHint esriCTadditionalFieldTable">
+						${nls.additionalFieldDisplayHintText}
+					</div>
+				</div>
+				<div class="esriCTListHeader" style="overflow: hidden;">
+				</div>
+
+			</div>
+
+			<!--Show asset address-->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.showAssetAddressLabel}
+				</div>
+				<div class="esriCTAssetCheckboxContainer">
+					<div class="esriCTAssetCheckbox">
+						<div checked="true" data-dojo-type="jimu/dijit/CheckBox" data-dojo-attach-point="assetAddressNode">
+						</div>
+					</div>
+					<div class="esriCTHint esriCTHintAssetAddress">
+						${nls.showAssetAddressHintText}
+					</div>
+				</div>
+			</div>
+
+			<!--Asset highlight color-->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.highlightcolorLabel}
+				</div>
+				<div class="esriCTLayerField">
+					<div class="esriCTPreviewField" data-dojo-attach-point="colorPickerNode">
+					</div>
+					<div class="esriCTHint esriCTPreviewHintField">
+						${nls.highlightcolorHintText}
+					</div>
+				</div>
+
+			</div>
+
+			<!--Tolerance-->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel esriCTLabelContainer">${nls.toleranceSettingLabel}
+				</div>
+				<div class="esriCTLayerFieldTollerance">
+					<div class="esriCTFieldLeft">
+						<div class="esriCTFullWidth" data-dojo-type="dijit/form/NumberTextBox" trim="true" required="true" data-dojo-attach-point="distanceNode">
+						</div>
+					</div>
+					<div class="esriCTFieldLeft esriCTMargin">
+						<select data-dojo-type="dijit/form/Select" data-dojo-attach-point="distanceUnitNode">
+            </select>
+					</div>
+				</div>
+				<div class="esriCTHint">
+					${nls.toleranceSettingHintText}</div>
+			</div>
+
+			<!--My Asset Symbol-->
+			<div data-dojo-attach-point="myAssetSymbolNode" class="esriCTMainActionsContainer esriCTHidden">
+				<fieldset class="esriCTSymbolFieldSet">
+					<legend class="esriCTFieldSetLegend">${nls.assetSymbolLegend}</legend>
+					<div class="esriCTLayerContainer row">
+						<div class="esriCTlabel" title="${nls.assetSymbolLabel">
+							${nls.assetSymbolLabel}
+						</div>
+						<div class="esriCTLayerFieldImgChooser">
+							<div data-dojo-attach-point="symbolChooserNode">
+							</div>
+							<div class="esriCTHint">
+								${nls.assetSymbolHintText}</div>
+						</div>
+					</div>
+
+					<!--height width for img -->
+					<div data-dojo-attach-point="symbolChooserDimensionsNode">
+					</div>
+				</fieldset>
+			</div>
+		</div>
+		<!-- Actions  Settings tab -->
+		<div class="" data-dojo-attach-point="actionSettingsTabNode" class="esriCTFullHeight">
+			<div>
+				<div class="row">
+					<div data-dojo-attach-point="actionsNode" class="esriCTMainActionsContainer">
+					</div>
+				</div>
+			</div>
+
+			<!--Primary Status-->
+
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.primaryStatusLabel}
+				</div>
+				<div class="esriCTFieldPrimaryStatus" data-dojo-attach-point="primaryStatusContainerNode">
+				</div>
+				<div class="esriCTHintPrimary">
+					${nls.primaryStatusHintText}
+				</div>
+			</div>
+
+			<!-- Before Action Image  -->
+
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.beforeActionLabel}
+				</div>
+				<div class="esriCTLayerField">
+					<div class="esriCTPreviewField" data-dojo-attach-point="pointSymbolImageNode">
+					</div>
+					<div>
+						<div class="image_chooser_base" data-dojo-attach-point="imageChooserBase">
+						</div>
+						<div class="esriCTThumbnailImgDiv">
+							<img class="esriCTThumbnailImg esriCTActionDimensions" data-dojo-attach-point="beforeActionImageNode">
+							</img>
+						</div>
+					</div>
+					<div class="esriCTHint">
+						${nls.beforeActionHint}
+					</div>
+				</div>
+			</div>
+
+			<!-- After Action Image  -->
+
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.afterActionLabel}
+				</div>
+				<div class="esriCTLayerField">
+					<div class="esriCTPreviewField" data-dojo-attach-point="pointSymbolAfterImageNode">
+					</div>
+					<div>
+						<div class="image_chooser_base" data-dojo-attach-point="imageChooserBase">
+						</div>
+						<div class="esriCTThumbnailImgDiv">
+							<img class="esriCTThumbnailImg esriCTActionDimensions" data-dojo-attach-point="afterActionImageNode">
+							</img>
+						</div>
+					</div>
+					<div class="esriCTHint">
+						${nls.afterActionHint}
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Strings  Settings tab -->
+		<div class="" data-dojo-attach-point="stringSettingsTabNode" class="esriCTFullHeight">
+			<!-- Adoption complete message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.actionPanelAssignLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="adoptionCompleteMsg">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.actionPanelAssignHint}
+					</div>
+				</div>
+			</div>
+			<!-- Abandon complete message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.actionPanelUnAssignLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="abandonCompleteMsg">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.actionPanelUnAssignHint}
+					</div>
+				</div>
+			</div>
+			<!-- Action complete message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.actionSuccessfulLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="actionCompleteMsg">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.actionSuccessfulHint}
+					</div>
+				</div>
+			</div>
+			<!-- Asset not found message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.assetNotFoundLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="assetNotFoundMsg">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.assetNotFoundHint}
+					</div>
+				</div>
+			</div>
+			<!-- Asset already adopted message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.assetAlreadyAssignedLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="assetAlreadyAdoptedMsg">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.assetAlreadyAssignedHint}
+					</div>
+				</div>
+			</div>
+			<!-- Unable to perform action message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.unableToPerformActionLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="unableToPerformAction">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.unableToPerformActionHint}
+					</div>
+				</div>
+			</div>
+			<!-- Add asset confirmartion message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.createNewAssetLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="addAssetConfirmationMsg">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.createNewAssetHint}
+					</div>
+				</div>
+			</div>
+			<!-- Add asset failed message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.createNewAssetFailedLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="unableToAddNewAssetMsg">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.createNewAssetFailedHint}
+					</div>
+				</div>
+			</div>
+			<!-- User token expired message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.tokenExpiredLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="userTokenExpiredMsg">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.tokenExpiredHint}
+					</div>
+				</div>
+			</div>
+			<!-- GP service success message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.authenticationSuccessLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="gpServiceSuccessMsg">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.authenticationSuccessHint}
+					</div>
+				</div>
+			</div>
+			<!-- Select asset message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.homeScreenMsgLabel}
+				</div>
+				<div class="esriCTLayerField">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="selectAssetMsg">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.homeScreenMsgHint}
+					</div>
+				</div>
+			</div>
+			<!-- Select asset before login message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.beforeLoginTooltipLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="selectAssetToolTipBeforeLogin">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.beforeLoginTooltipHint}
+					</div>
+				</div>
+			</div>
+			<!-- Select asset after login message -->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.afterLoginTooltipLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="selectAssetToolTipAfterLogin">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.afterLoginTooltipHint}
+					</div>
+				</div>
+			</div>
+			<!-- Nickname placeholder text-->
+			<div class="esriCTLayerContainer row">
+				<div class="esriCTlabel">${nls.actions.nicknameLabel}
+				</div>
+				<div class="esriCTLayerField ">
+					<div class="esriCTNotificationStrings" data-dojo-type="dijit/form/ValidationTextBox" required="true" data-dojo-attach-point="nameAssetTextBoxPlaceholder">
+					</div>
+					<div class="esriCTHint">
+						${nls.actions.nicknameHint}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

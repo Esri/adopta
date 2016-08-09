@@ -1,0 +1,758 @@
+/* Start for common css */
+
+.jimu-widget-adopta-setting .esriCTHidden
+{
+    display: none;
+}
+
+.jimu-widget-adopta-setting .esriCTFullHeightWidth
+{
+    height: 100%;
+    width: 100%;
+}
+
+.jimu-widget-adopta-setting .esriCTFullWidth
+{
+    width: 100%;
+    float: right;
+}
+
+.jimu-widget-adopta-setting .esriCTFullHeight
+{
+    height: 100%;
+}
+
+.jimu-widget-adopta-setting .esriCTCursorPointer
+{
+    cursor: pointer;
+}
+
+.jimu-widget-adopta-setting .esriCTDefaultPointer
+{
+    cursor: default;
+}
+.jimu-widget-adopta-setting .esriCTLayerContainer
+ {
+    width: 100%;
+    float: left;
+    margin-top: 20px;
+ }
+
+.jimu-widget-adopta-setting .esriCTLabelContainer
+ {
+    width: 20%;
+    float: left;
+ }
+
+.jimu-widget-adopta-setting .esriCTlabel
+ {
+    width: 25%;
+    padding: 5px 10px 5px 20px;
+    word-break: break-all;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    float: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 250px;
+    color: #596679;
+    font-size: 14px;
+ }
+
+.jimu-widget-adopta-setting .row
+ {
+    clear: both;
+ }
+
+.jimu-widget-adopta-setting .esriCTHint
+ {
+    margin: 5px 5px 10px 0;
+    float: left;
+    font-size: 12px;
+    color: #a0acbf;
+    font-style: oblique;
+ }
+.jimu-widget-adopta-setting .esriCTHintPrimary
+{
+    font-size: 12px;
+    color: #a0acbf;
+    font-style: oblique;
+    line-height: 30px;
+}
+.jimu-widget-adopta-setting .esriCTFieldPrimaryStatus
+{
+    width: 55%;
+}
+
+.jimu-widget-adopta-setting .esriCTLayerField
+ {
+    width: 73%;
+    float: left;
+ }
+
+ .jimu-widget-adopta-setting .esriCTLayerChooserField
+ {
+     width: 65%;
+     float: left;
+ }
+
+.jimu-widget-adopta-setting .esriCTForeignKey
+ {
+    height: 30px;
+    width: 80%;
+ }
+
+.jimu-widget-adopta-setting .esriCTAuthenticationGPService
+ {
+    float: left;
+    width: 85%;
+ }
+
+.jimu-widget-adopta-setting .esriCTSetButton
+ {
+    float: right;
+    max-width: 70px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    height: 30px;
+    margin-right: 10px;
+    line-height: 30px
+ }
+
+.jimu-widget-adopta-setting .esriCTForeignkeyFieldDropBox
+ {
+    width: 80%;
+ }
+
+.jimu-widget-adopta-setting .esriCTCheckBoxHint
+ {
+    margin-left: 20px;
+    float: left;
+    font-size: 12px;
+    color: #a0acbf;
+    font-style: oblique;
+ }
+
+.jimu-widget-adopta-setting .esriCTEllipsis
+{
+    width: 25%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.jimu-widget-adopta-setting .esriCTMargin {
+    margin-left: 10px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTMargin {
+    margin-left: auto;
+    margin-right: 10px;
+}
+
+.jimu-widget-adopta-setting .esriCTActionsFieldSet, .jimu-widget-adopta-setting .esriCTSymbolFieldSet
+{
+    height: auto;
+    width: 95%;
+    border: 1px solid #a0acbf! important;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #596679;
+    margin-bottom: 10px;
+}
+
+/* End for common css */
+
+
+ /* Start for the RTF */
+.jimu-widget-adopta-setting .editorDescriptionContainer
+{
+    width: 95%;
+}
+
+.jimu-widget-adopta-setting .editor-container .dijitFontNameCombo
+{
+    margin-left: 19px;
+}
+
+.jimu-widget-adopta-setting .editor-container
+{
+    width: 72%;
+    height: 100%;
+    position: relative;
+    float: right;
+}
+
+.jimu-widget-adopta-setting .jimu-image-chooser
+{
+    right: inherit !important;
+}
+
+.jimu-widget-adopta-setting .editor-container .uploaderInsideNode embed
+{
+    display: none;
+}
+
+/* End for the RTF */
+
+.jimu-widget-adopta-setting .esriCTHintColor
+{
+    float: right;
+}
+
+.jimu-widget-adopta-setting .esriCTPreviewHintField
+ {
+    width: 70%;
+    line-height: 30px;
+    margin-left: 10px;
+ }
+
+.jimu-widget-adopta-setting .esriCTPreviewField
+ {
+    float: left;
+    position: relative;
+ }
+
+.jimu-widget-adopta-setting .esriCTRightHint
+ {
+    margin-right: 40px;
+ }
+
+.jimu-widget-adopta-setting .esriCTLayerFieldTollerance
+ {
+    width: 50%;
+    float: left;
+ }
+
+ .esriRtl .jimu-widget-adopta-setting .esriCTLayerFieldTollerance
+ {
+    float: right;
+ }
+
+.jimu-widget-adopta-setting .esriCTFieldLeft
+ {
+     float: left;
+     width: 20%;
+ }
+
+.jimu-widget-adopta-setting .esriCTFieldRight
+ {
+     float: right;
+     width: 23%;
+ }
+
+.jimu-widget-adopta-setting .esriCTHintAssetAddress
+ {
+    margin-left: 10px;
+ }
+
+ .jimu-widget-adopta-setting .img-chooser
+{
+    width: 50px;
+    height: 50px;
+    position: absolute !important;
+}
+
+
+/* Symbol Chooser Starts */
+
+ .jimu-widget-adopta-setting .esriCTSymbolChooserNode
+{
+    text-align: center;
+    cursor: pointer;
+    min-width: 80px;
+}
+
+/*Start override layerchooser style to fix text overflow if layer name is to large*/
+ .jimu-widget-adopta-setting .jimu-layer-chooser-from-map-withdropbox .layer-name
+{
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 0px 18px 0px 9px;
+}
+
+/*End override layerchooser style to fix text overflow if layer name is to large*/
+
+/* Symbol Chooser Ends */
+
+/*Simple Table Starts*/
+
+.jimu-widget-adopta-setting .esriCTadditionalFieldTable
+ {
+    height: 100%;
+    width: 68%;
+    float: right;
+    margin-right: 50px;
+ }
+
+ .jimu-widget-adopta-setting .esriCTTableContainer
+ {
+     max-height: 130px;
+     overflow: auto;
+ }
+
+.jimu-widget-adopta-setting .esriCTParentTableField
+ {
+    width: 100%;
+ }
+
+.jimu-widget-adopta-setting .esriCTAddnewClicked
+ {
+    float: left;
+ }
+
+.jimu-widget-adopta-setting .esriCTTabel
+ {
+    min-width: 150px !important;
+ }
+
+.jimu-widget-adopta-setting .esriCTTableInputControl
+ {
+    margin-bottom: 10px;
+ }
+
+.jimu-widget-adopta-setting .esriCTTableInputControlCheckBox
+ {
+    line-height: 40px;
+ }
+
+.jimu-widget-adopta-setting .esriCTSelectedLayersDiv
+ {
+    max-height: 200px;
+    min-height: 31px;
+    overflow: auto;
+    width: 85%;
+    float: left;
+    border: 1px solid #d2dae2;
+    background: #e3ecf2;
+    margin-right: 10px;
+    line-height: 30px;
+    padding-left: 10px;
+ }
+
+/*Simple Table Ends*/
+
+/*Start Actions*/
+
+.jimu-widget-adopta-setting .esriCTActionsContent
+{
+    padding: 15px;
+}
+
+.jimu-widget-adopta-setting .esriCTMainActionsContainer
+{
+    margin-left: 20px;
+}
+
+.jimu-widget-adopta-setting .esriCTFieldSetLegend
+{
+    margin-left: 15px;
+}
+
+/* override textbox styles */
+.jimu-widget-adopta-setting .esriCTActionsFieldSet .dijitTextBox
+{
+    width: 350px;
+}
+.jimu-widget-adopta-setting .esriCTActionsInfo
+{
+    height: 100px;
+}
+
+.jimu-widget-adopta-setting .esriCTActionsLabelContainer
+{
+    float: left;
+    width: 50%;
+}
+
+.jimu-widget-adopta-setting .esriCTActionsURLLabel
+{
+    float: right;
+    width: 50%;
+}
+
+.jimu-widget-adopta-setting .estiCTHoriZontalLine
+{
+    width: 100%;
+    float: left;
+    margin-top: 5px;
+}
+
+.jimu-widget-adopta-setting .esriCTActionsLabel
+{
+    float: left;
+    width: 10%;
+    line-height: 24px;
+}
+
+.jimu-widget-adopta-setting .esriCTAssignLabel
+{
+    padding: 5px 10px 5px 3px;
+}
+
+.jimu-widget-adopta-setting .esriCTFieldsDropDown, .jimu-widget-adopta-setting .esriCTInputFields
+{
+    float: left;
+    margin-right: 15px;
+}
+
+.jimu-widget-adopta-setting .esriCTActionClose
+{
+    float: right;
+    cursor: pointer;
+    margin-right: 15px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTActionClose
+{
+    float: left;
+    margin-right: 5px;
+}
+
+.jimu-widget-adopta-setting .esriCTActionCloseImage
+{
+    background-image: url("../images/close.png");
+    background-size: 16px;
+    background-position: center;
+    height: 32px;
+    width: 32px;
+    background-repeat: no-repeat;
+}
+
+.jimu-widget-adopta-setting .esirCTAdditionalActionsInfo .dijitSelect, .jimu-widget-adopta-setting .esirCTAdditionalActionsInfo .dijitTextBox
+{
+    width: 250px;
+}
+
+.jimu-widget-adopta-setting .esriCTAdditionalActionContainer
+{
+    float: left;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.jimu-widget-adopta-setting .esriCTAdditionalActionInfo
+{
+    float: left;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.jimu-widget-adopta-setting .esriCTPrimaryStatus
+{
+    height: 100px;
+    width: 100px;
+    background-color: bisque;
+}
+
+.jimu-widget-adopta-setting .esriCTThumbnailImg
+{
+    background-position: center center;
+    background-repeat: no-repeat;
+}
+.jimu-widget-adopta-setting .esriCTActionDimensions
+{
+    height: 30px;
+    width: 30px;
+}
+
+.jimu-widget-adopta-setting .esriCTPrimaryStatus
+{
+    height: 30px;
+    width: 50px;
+
+}
+
+.jimu-widget-adopta-setting .esriCTLayerFieldImgChooser
+{
+     width: 70%;
+     float: left;
+}
+
+.jimu-widget-adopta-setting .esriCTUpDownDeleteContainer
+{
+      height: 30px;
+      width: 60px;
+      float: right;
+      margin-right: 10px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTUpDownDeleteContainer
+{
+      float: left;
+      margin-right: auto;
+      margin-left: 10px;
+}
+.jimu-widget-adopta-setting .esriCTNavigationControls
+{
+    float: left;
+    height: 30px;
+    width: 20px;
+    margin: 2px;
+}
+
+.jimu-widget-adopta-setting .esriCTDownArrowImg
+{
+     background-image: url("../images/down-enable.png");
+     cursor: pointer;
+}
+
+.jimu-widget-adopta-setting .esriCTUpArrowImg
+{
+     background-image: url("../images/up-enable.png");
+     cursor: pointer;
+}
+
+.jimu-widget-adopta-setting .esriCTDeleteImg
+{
+     background-image: url("../images/delete-enable.png");
+     cursor: pointer;
+}
+
+.jimu-widget-adopta-setting .esriCTDownArrowImgDisabled
+{
+     background-image: url("../images/down-disable.png");
+     cursor: default;
+}
+
+.jimu-widget-adopta-setting .esriCTUpArrowImgDisabled
+{
+     background-image: url("../images/up-disable.png");
+     cursor: default;
+}
+
+.jimu-widget-adopta-setting .esriCTNavigationImagesDimension
+{
+     background-repeat: no-repeat;
+     height: 14px;
+     width: 14px;
+     background-size: 14px;
+     margin-left: 3px;
+}
+
+.jimu-widget-adopta-setting .esriCTStatusLabel
+{
+    float: left;
+    width: 170px;
+    line-height: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #596679;
+    font-size: 14px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTStatusLabel
+{
+    float: right;
+}
+/*Ends Actions*/
+
+/*override layerchooser style to fix text overflow if layer name is to large*/
+.jimu-widget-adopta-setting .jimu-layer-chooser-from-map-withdropbox .layer-name
+{
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 0px 18px 0px 9px;
+}
+/*End override layerchooser style*/
+
+/* Styles for Strings starts */
+
+.jimu-widget-adopta-setting .esriCTNotificationStrings
+ {
+    float: left;
+    width: 100%;
+ }
+/* End of styles for Strings */
+
+/*RTL Starts*/
+
+.esriRtl .jimu-widget-adopta-setting .esriCTLayerField
+{
+    float: right;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTlabel
+{
+    float: right;
+    padding: 5px 20px 5px 10px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTSelectedLayersDiv
+{
+    float: right;
+    margin-left: 10px;
+    padding-right: 10px;
+    margin-right: 0px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTSetButton
+{
+    float: left;
+    margin-left: 10px;
+    margin-right: 0px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTHint
+{
+    float: right;
+    margin: 5px 0px 10px 5px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTAuthenticationGPService
+{
+    float: right;
+}
+
+
+.esriRtl .jimu-widget-adopta-setting .esriCTAddnewClicked
+{
+    float: right;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTadditionalFieldTable
+{
+    float: left;
+    margin-left: 50px;
+    margin-right: 0px;
+}
+
+.jimu-widget-adopta-setting .esriCTAssetCheckboxContainer
+{
+    line-height: 27px;
+}
+
+.jimu-widget-adopta-setting .esriCTAssetCheckbox
+{
+    float: left;
+    margin-top: 7px;
+}
+
+
+.esriRtl .jimu-widget-adopta-setting .esriCTAssetCheckbox
+{
+    float: right;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTPreviewField
+{
+    float: right;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTActionsLabelContainer
+ {
+    float: right;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTActionsLabel
+{
+    float: right;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTFieldLeft
+{
+    float: right;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTFieldRight
+{
+    float: left;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTHintAssetAddress
+ {
+    margin-right: 10px;
+    margin-left: 0px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTPreviewHintField
+{
+    margin-left: 0px;
+    margin-right: 10px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTMainActionsContainer
+{
+    margin-left: 0px;
+    margin-right: 20px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTFieldSetLegend
+{
+    margin-left: 0px;
+    margin-right: 15px;
+}
+
+.esriRtl .jimu-widget-adopta-setting .esriCTFieldsDropDown
+{
+    float: right;
+    margin-left: 15px;
+    margin-right: 0px;
+}
+/*RTL Ends*/
+
+/* Override Styles for jimu tab*/
+.jimu-widget-adopta-setting .jimu-tab3
+{
+    height: 100%;
+    overflow: hidden;
+}
+.jimu-widget-adopta-setting .jimu-viewstack
+{
+    height: calc(100% - 45px);
+    overflow: auto;
+}
+/* End of styles for jimu tab*/
+
+/* Overridden DOJO style*/
+
+.claro .dijitTextBox, .claro .dijitSelect
+{
+    color: #7989a0;
+    background-color: #fafafc;
+    border: 1px solid #d2dae2;
+}
+
+.dj_webkit .claro .dijitTextBox .dijitInputInner
+{
+    color: #7989a0;
+}
+
+.claro .dijitSelectDisabled, .claro .dijitTextBoxDisabled, .claro .dijitTextBoxDisabled .dijitInputContainer
+{
+    background-color: #e3ecf2;
+}
+
+.claro .dijitSelect .dijitArrowButton
+{
+    background-color: #fafafc;
+    background-image: none;
+    border-color: #fafafc;
+}
+
+.jimu-widget-adopta-setting .dijitSelect .dijitButtonContents
+{
+    border-style: none none none none;
+    background-color: #fafafc;
+}
+
+/* End Of Overridden DOJO style*/
+
+/* Remove close button from textbox in IE */
+input[type=text]::-ms-clear {
+    display: none;
+}
+/* End of IE styles */
+
+/* Overrride simple table */
+.jimu-widget-adopta-setting .jimu-simple-table .table
+{
+    border-collapse: separate;
+}
+/*End of override simple table*/
+

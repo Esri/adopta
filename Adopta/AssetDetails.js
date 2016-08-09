@@ -82,15 +82,10 @@
     **/
     _setPrimaryAction: function () {
       var i;
-      if (this.config.actions.unAssign.displayInMyAssets) {
-        this.primaryAction = lang.clone(this.config.actions.unAssign);
-      }
-      else {
-        for (i = 0; i < this.config.actions.additionalActions.length; i++) {
-          if (this.config.actions.additionalActions[i].displayInMyAssets) {
-            this.primaryAction = lang.clone(this.config.actions.additionalActions[i]);
-            break;
-          }
+      for (i = 0; i < this.config.actions.additionalActions.length; i++) {
+        if (this.config.actions.additionalActions[i].displayInMyAssets) {
+          this.primaryAction = lang.clone(this.config.actions.additionalActions[i]);
+          break;
         }
       }
     },
@@ -171,6 +166,10 @@
           this.own(on(this.nickNameInputTextBox, "keyup", lang.hitch(this, function () {
             this._calculateCharactersCount();
           })));
+          //If user is not logged in, disable nickname input box
+          if (!this.config.userDetails) {
+            this.nickNameInputTextBox.set("disabled", true);
+          }
         }
       }
       adoptBtnContainer = domConstruct.create("div", {
@@ -193,9 +192,9 @@
             //Check if nick name field is empty
             if (this.nickNameInputTextBox) {
               this.selectedFeature.attributes[this.config.nickNameField] =
-                this.nickNameInputTextBox.getValue();
+                this.nickNameInputTextBox.get("value");
               updatedAttributes[this.config.nickNameField] =
-                this.nickNameInputTextBox.getValue();
+                this.nickNameInputTextBox.get("value");
             }
             if (domAttr.get(adoptBtn, "innerHTML") === this.config.actions.assign.name) {
               this._adoptAsset(this.selectedFeature);
@@ -231,9 +230,9 @@
             this.prevNicknameValue = this.selectedFeature.attributes[this.config.nickNameField];
             this._calculateCharactersCount();
           }
+          //If nickname field is not configured hide the adopt/update button
           if (!this.config.nickNameField) {
-            domClass.add(adoptBtn, "jimu-state-disabled");
-            buttonText = this.config.actions.unAssign.name;
+            domClass.add(adoptBtn, "esriCTHidden");
           } else {
             domClass.add(adoptBtn, "jimu-state-disabled");
             buttonText = this.nls.nickNameUpdateButtonLabel;
@@ -350,8 +349,8 @@
         //If action is assign, check if nick name field has some value and pass the
         //attribute to apply edits
         if (this.config.nickNameField && this.nickNameInputTextBox &&
-          lang.trim(this.nickNameInputTextBox.getValue()) !== "") {
-          updatedAttributes[this.config.nickNameField] = this.nickNameInputTextBox.getValue();
+          lang.trim(this.nickNameInputTextBox.get("value")) !== "") {
+          updatedAttributes[this.config.nickNameField] = this.nickNameInputTextBox.get("value");
         }
       } else {
         isNewAssetAdopted = false;
@@ -639,20 +638,20 @@
     */
     _calculateCharactersCount: function () {
       var count;
-      if (this.nickNameInputTextBox.getValue().length >= this.maxLength) {
+      if (this.nickNameInputTextBox.get("value").length >= this.maxLength) {
         this.nickNameInputTextBox.value =
-          this.nickNameInputTextBox.getValue().substring(0, this.maxLength);
+          this.nickNameInputTextBox.get("value").substring(0, this.maxLength);
         this.nickNameInputTextBox.domNode.blur();
         // Setting the count to "No" if character limit is exceeded
-        count = this.nickNameInputTextBox.getValue().length - this.maxLength;
+        count = this.nickNameInputTextBox.get("value").length - this.maxLength;
         this.countLabel.innerHTML = count;
       } else {
         // Decreasing the count and displaying the entered character in the textarea
-        count = this.maxLength - this.nickNameInputTextBox.getValue().length;
+        count = this.maxLength - this.nickNameInputTextBox.get("value").length;
         this.countLabel.innerHTML = count;
       }
       //Check if newly enterd value is different than actual saved value
-      if (lang.trim(this.nickNameInputTextBox.getValue()) !== this.prevNicknameValue) {
+      if (lang.trim(this.nickNameInputTextBox.get("value")) !== this.prevNicknameValue) {
         if (dojoQuery(".esriCTAdoptButton", this.domNode)[0]) {
           domClass.remove(dojoQuery(".esriCTAdoptButton",
             this.domNode)[0], "jimu-state-disabled");

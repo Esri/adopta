@@ -1,0 +1,41 @@
+﻿<div class="esriCTFullHeightWidth">
+    <!--Field Name -->
+        <div class="esriCTTableContainer">
+            <div class="esriCTlabel esriCTTabel"> ${nls.simpleTable.fieldNameLabel}
+            </div>
+            <div class="esriCTTableInputControl">
+                <div data-dojo-type="dijit/form/TextBox" trim="true" required="true" data-dojo-attach-point="fieldNameNode">
+                </div>
+            </div>
+
+            <!-- Hint Text-->
+            <div>
+                <div class="esriCTlabel esriCTTabel"> ${nls.simpleTable.hintTextLabel}
+                </div>
+                <div class="esriCTTableInputControl">
+                    <div data-dojo-type="dijit/form/TextBox" trim="true" required="true" data-dojo-attach-point="hintTextNode">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Required-->
+            <div>
+                <div class="esriCTlabel esriCTTabel"> ${nls.common.required}
+                </div>
+                <div class="esriCTTableInputControl esriCTTableInputControlCheckBox">
+                    <div data-dojo-type="jimu/dijit/CheckBox" trim="true" required="true" data-dojo-attach-point="requiredNode">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--Buttons-->
+        <div data-dojo-attach-point="buttonsDiv" class="buttonsDiv">
+            <div class="button-container button-container-absolute" style="padding: 0px;">
+                <div class="jimu-btn jimu-float-trailing jimu-leading-margin1" data-dojo-attach-point="cancelButton">
+                    ${nls.common.cancel}</div>
+                <div class="jimu-btn jimu-float-trailing jimu-leading-margin1" data-dojo-attach-point="okButton">
+                    ${nls.common.ok}</div>
+            </div>
+        </div>
+</div>

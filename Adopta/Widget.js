@@ -78,6 +78,12 @@ function (
       this.inherited(arguments);
     },
 
+    postMixInProperties: function () {
+      //mixin default nls with widget nls
+      this.nls.common = {};
+      this.nls.common = window.jimuNls.common;
+    },
+
     startup: function () {
       this.inherited(arguments);
       // validate if layers are configured then only load the widget
@@ -208,6 +214,10 @@ function (
       this._loginInstance.on("userAuth", lang.hitch(this, function () {
         this._mapTooltipHandler.disconnectEventHandler();
       }));
+      //Listen for registration complete event and attach map handlers
+      this._loginInstance.on("registeredUserCallback", lang.hitch(this, function () {
+        this._mapTooltipHandler.connectEventHandler();
+      }));
       this._loginInstance.startup();
     },
 
@@ -241,7 +251,7 @@ function (
             message: newMsg,
             type: "question",
             buttons: [{
-              "label": this.nls.yesButtonLabel, "onClick": lang.hitch(this, function () {
+              "label": this.nls.common.yes, "onClick": lang.hitch(this, function () {
                 if (this._assetLayer.geometryType === "esriGeometryPoint") {
                   this._confirmationBox.close();
                   this._addNewFeature(evt.mapPoint);
@@ -251,7 +261,7 @@ function (
                   this._createDrawTool(Draw.POLYLINE);
                 }
               })
-            }, { "label": this.nls.noButtonLabel }]
+            }, { "label": this.nls.common.no }]
           });
         }
       }));
@@ -268,6 +278,8 @@ function (
       this._toolBar = new Draw(this.map);
       //Disconnect map event handler and remove tooltip from map
       this._mapTooltipHandler.disconnectEventHandler();
+      //Forcefully disable webmap popup
+      this._mapTooltipHandler._disableWebMapPopup();
       this.mapClickHandler.pause();
       //activate the toolbar
       this._toolBar.activate(toolType);
@@ -279,13 +291,13 @@ function (
           message: this.nls.assetConfirmationMsg,
           type: "question",
           buttons: [{
-            "label": this.nls.yesButtonLabel, "onClick": lang.hitch(this, function () {
+            "label": this.nls.common.yes, "onClick": lang.hitch(this, function () {
               confirmAssetStatus.close();
               this._loading.show();
               this._addNewFeature(feature.geometry);
             })
           }, {
-              "label": this.nls.noButtonLabel, "onClick": lang.hitch(this, function () {
+              "label": this.nls.common.no, "onClick": lang.hitch(this, function () {
                 confirmAssetStatus.close();
                 this._resetMapHandlers();
               })
@@ -511,9 +523,9 @@ function (
           this._clearGraphics();
         }
         if (this._myAssetsInstance && this._myAssetsInstance.myAssets.length > 0) {
-          if (domClass.contains(this._myAssetsInstance.selecetAssetSection, "esriCTHidden") &&
+          if (domClass.contains(this._myAssetsInstance.selectAssetSection, "esriCTHidden") &&
             this._prevOpenPanel !== "assetDetails") {
-            this._myAssetsInstance.showSelectAsssetSection();
+            this._myAssetsInstance.showSelectAssetSection();
             this._handleNavigationArrowVisibility(true, false);
           } else {
             this._myAssetsInstance.showMyAssets();
@@ -521,7 +533,7 @@ function (
             this._handleNavigationArrowVisibility(false, true);
           }
         } else {
-          this._myAssetsInstance.showSelectAsssetSection();
+          this._myAssetsInstance.showSelectAssetSection();
           this._showPanel("myAsset");
           this._handleNavigationArrowVisibility(false, false);
         }
@@ -533,10 +545,12 @@ function (
     * @memberOf widgets/Adopta/Widget
     */
     onOpen: function () {
-      if (this._isValidConfig && this._showtooltip &&
-        this.config.urlParams && !this.config.urlParams.userid &&
-        !this.config.urlParams.usertoken) {
+      if (this._isValidConfig) {
         this._mapTooltipHandler.connectEventHandler();
+        //If user is logged in, connect map click handler
+        if (this.mapClickHandler && this.config.userDetails) {
+          this.mapClickHandler.resume();
+        }
       }
     },
 
@@ -545,8 +559,16 @@ function (
     * @memberOf widgets/Adopta/Widget.js
     */
     onClose: function () {
-      if (this._isValidConfig && this._showtooltip) {
+      if (this._isValidConfig) {
         this._mapTooltipHandler.disconnectEventHandler();
+        //on widget close, disconnect map click handler
+        if (this.mapClickHandler) {
+          this.mapClickHandler.pause();
+        }
+        //If tool bar is active, deactivate tool bar on widget close
+        if(this._toolBar){
+          this._toolBar.deactivate();
+        }
       }
     },
 
@@ -588,7 +610,10 @@ function (
     **/
     _showMessage: function (msg) {
       var alertMessage = new Message({
-        message: msg
+        message: msg,
+        buttons: [{
+          "label": this.nls.common.ok
+        }]
       });
       alertMessage.message = msg;
     },

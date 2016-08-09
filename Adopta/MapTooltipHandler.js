@@ -5,6 +5,7 @@
   'dojo/dom-style',
   'dojo/dom-construct',
   'dojo/on',
+  'jimu/utils',
   "dojo/_base/event"
 ], function (
   declare,
@@ -13,6 +14,7 @@
   domStyle,
   domConstruct,
   on,
+  jimuUtils,
   event
 ) {
   return declare([Evented], {
@@ -36,6 +38,7 @@
     * @memberOf widgets/Adopta/MapTooltipHandler
     **/
     connectEventHandler: function () {
+      this.disconnectEventHandler();
       this._disableWebMapPopup();
       this._mapClickHandler = on(this.handleClickFor, "click", lang.hitch(this, function (evt) {
         //stop the event propagation
@@ -78,7 +81,7 @@
       //create tool-tip to be shown on map move
       this._mapTooltip = domConstruct.create("div", {
         "class": "tooltip",
-        "innerHTML": this.config.selectAssetToolTipBeforeLogin
+        "innerHTML": jimuUtils.sanitizeHTML(this.config.selectAssetToolTipBeforeLogin)
       }, this.map.container);
       domStyle.set(this._mapTooltip, "position", "fixed");
       domStyle.set(this._mapTooltip, "display", "none");
@@ -143,7 +146,8 @@
     * @memberOf widgets/Adopta/MapTooltipHandler
     **/
     updateTooltip: function () {
-      this._mapTooltip.innerHTML = this.config.selectAssetToolTipAfterLogin;
+      this._mapTooltip.innerHTML = jimuUtils.sanitizeHTML(this.config
+        .selectAssetToolTipAfterLogin);
     }
 
   });
