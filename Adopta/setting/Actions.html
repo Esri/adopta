@@ -1,0 +1,49 @@
+<div>
+  <div class="esriCTlabel esriCTAssignLabel" data-dojo-attach-point="actionTitleNode"></div>
+  <fieldset class="esriCTActionsFieldSet">
+    <legend class="esriCTFieldSetLegend" data-dojo-attach-point="legendsNode"> </legend>
+    <div class="esriCTActionsContent">
+      <div class="esriCTActionsInfo">
+        <div class="esriCTActionsLabelContainer">
+          <div class="esriCTActionLabel esriCTEllipsis">
+            ${nls.actions.actionLabel}
+          </div>
+          <div>
+            <div data-dojo-type="dijit/form/ValidationTextBox" data-dojo-attach-point="actionsLabelNode" trim="true" required="true" maxlength="20">
+            </div>
+          </div>
+          <div class="esriCTHint">
+            ${nls.actions.actionLabelHint}
+          </div>
+        </div>
+        <div class="esriCTActionsURLLabel">
+          <div class="esriCTActionLabel esriCTEllipsis">
+            ${nls.actions.urlParameterLabel}
+          </div>
+          <div>
+            <div data-dojo-type="dijit/form/ValidationTextBox" data-dojo-attach-point="actionsURLParameterNode" trim="true" required="true" maxlength="20">
+            </div>
+          </div>
+          <div class="esriCTHint">
+            ${nls.actions.urlParameterLabelHint}
+          </div>
+        </div>
+        <div class="estiCTHoriZontalLine">
+          <hr>
+        </div>
+      </div>
+      <div class="esirCTAdditionalActionsInfo">
+        <div class="esriCTActionsLabel esriCTEllipsis">
+          ${nls.actions.actionTextLabel}
+        </div>
+        <div class="esriCTAddActionsLink">
+          <div class="add-with-icon" data-dojo-attach-point="addActionsLink">
+            <span class="jimu-icon jimu-icon-add"></span><span class="add-label">${nls.addFieldLabelText}</span>
+          </div>
+        </div>
+        <div class="esriCTAdditionalActionContainer" data-dojo-attach-point="additionalActionContainer">
+        </div>
+      </div>
+    </div>
+  </fieldset>
+</div>

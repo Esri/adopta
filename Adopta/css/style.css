@@ -197,10 +197,10 @@
 .jimu-widget-Adopta .esriCTAssetDetailsImageDimensions
 {
     background-position: center;
-    background-size: 28px;
+    background-size: 30px;
     background-repeat: no-repeat;
-    height: 28px;
-    width: 28px;
+    height: 30px;
+    width: 30px;
     display: inline-block;
     vertical-align: middle;
 }
@@ -327,13 +327,13 @@
 
 .jimu-widget-Adopta .esriCTimageDimensions
 {
+     display: block;
      background-position:center;
-     background-size:28px;
+     background-size:30px;
      background-repeat:no-repeat;
-     height:28px;
-     width: 28px;
-     float: right;
-     margin: 7px 0 0 5px;
+     height:30px;
+     width: 30px;
+     margin: 6px 0 0 5px;
 }
 
 .esriRtl .jimu-widget-Adopta .esriCTimageDimensions
@@ -350,6 +350,7 @@
 {
     float: right;
     max-width: 50%;
+    position: relative;
 }
 
 .esriRtl .jimu-widget-Adopta .esriCTItemActionContainer
@@ -360,20 +361,28 @@
 .jimu-widget-Adopta .esriCTItemActionText
 {
     float: left;
-    max-width: 75%;
+    max-width: 100%;
     font-weight: bold;
+    padding-right: 35px;
 }
 
 .esriRtl .jimu-widget-Adopta .esriCTItemActionText
 {
-    float: right;
-    text-align: left;
+    float: left;
+    padding-left: 35px;
 }
 
 .jimu-widget-Adopta .esriCTPrimaryActionImageContainer
 {
+    position: absolute;
+    right: 2px;
     height: 42px;
-    float: right;
+}
+
+.esriRtl .jimu-widget-Adopta .esriCTPrimaryActionImageContainer
+{
+    right: auto;
+    left: 2px;
 }
 /*------------------------- Overridden dojo Styles -----------------------*/
 /*Hide arrow node for team autocomplete box*/
@@ -385,4 +394,9 @@
 .jimu-widget-Adopta .esriCTAssetInfoSectionContent .dijitContentPane
 {
     padding: 0px !important;
+}
+
+/* Remove close button from textbox in IE */
+input[type=text]::-ms-clear {
+    display: none;
 }

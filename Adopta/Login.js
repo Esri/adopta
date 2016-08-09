@@ -241,6 +241,8 @@
                   //set height of login info container
                   this.calculateHight();
                   this.loading.hide();
+                  //Since user again goes on login page, connect map event handler
+                  this.emit("registeredUserCallback");
                 }
               }));
             } else {
@@ -295,7 +297,7 @@
       });
       if (fieldDetails.required) {
         inputTextBox.set("placeHolder", inputTextBox.placeHolder +
-          " (" + this.nls.requiredText + ")");
+          " (" + this.nls.common.required + ")");
       }
       inputTextBox.placeAt(nodeContainer);
       fieldDetails.control = inputTextBox;
@@ -311,7 +313,7 @@
         this.emailTextbox.focusNode.blur();
       }
       if (this.emailTextbox.isValid()) {
-        this.userDetails[this.config.emailField] = this.emailTextbox.getValue();
+        this.userDetails[this.config.emailField] = this.emailTextbox.get("value");
         if (lang.trim(domAttr.get(this.loginBtn, "innerHTML")) === this.nls.signUpLabel) {
           if (this._validateFields()) {
             this._registerUser();
@@ -352,18 +354,18 @@
       // create an empty array object
       attributes = {};
       if (this._teamFieldComboBox) {
-        attributes[this.config.teamField.name] = this._teamFieldComboBox.getValue();
+        attributes[this.config.teamField.name] = this._teamFieldComboBox.get("value");
       }
       array.forEach(this.config.additionalLoginParameters, lang.hitch(this,
         function (currentField) {
           // get id of the field
           key = currentField.field;
           // Assign value to the attributes
-          attributes[key] = currentField.control.getValue();
+          attributes[key] = currentField.control.get("value");
         }));
 
       params = {
-        "Input_user_email": this.emailTextbox.getValue(),
+        "Input_user_email": this.emailTextbox.get("value"),
         "Signup_fields": JSON.stringify(attributes),
         "App_URL": this._getAppURL(),
         "Action": "signup"
@@ -387,9 +389,11 @@
           }
           this.loading.hide();
         }
+        this.emit("registeredUserCallback");
       }), function (err) {
         this.showMsg(err.message);
         this.loading.hide();
+        this.emit("registeredUserCallback");
       });
     },
 

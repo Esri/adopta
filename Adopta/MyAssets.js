@@ -77,7 +77,7 @@
           }
         }), 100);
       })));
-      domAttr.set(this.selecetAssetSection, "innerHTML", jimuUtils.sanitizeHTML(
+      domAttr.set(this.selectAssetSection, "innerHTML", jimuUtils.sanitizeHTML(
         this.config.selectAssetMsg));
     },
 
@@ -87,15 +87,10 @@
     **/
     _setPrimaryAction: function () {
       var i;
-      if (this.config.actions.unAssign.displayInMyAssets) {
-        this._primaryAction = lang.clone(this.config.actions.unAssign);
-      }
-      else {
-        for (i = 0; i < this.config.actions.additionalActions.length; i++) {
-          if (this.config.actions.additionalActions[i].displayInMyAssets) {
-            this._primaryAction = lang.clone(this.config.actions.additionalActions[i]);
-            break;
-          }
+      for (i = 0; i < this.config.actions.additionalActions.length; i++) {
+        if (this.config.actions.additionalActions[i].displayInMyAssets) {
+          this._primaryAction = lang.clone(this.config.actions.additionalActions[i]);
+          break;
         }
       }
     },
@@ -105,7 +100,7 @@
     * @memberOf widgets/Adopta/MyAssets
     **/
     showMyAssets: function () {
-      domClass.add(this.selecetAssetSection, "esriCTHidden");
+      domClass.add(this.selectAssetSection, "esriCTHidden");
       domClass.remove(this.myAssetsSection, "esriCTHidden");
     },
 
@@ -113,8 +108,8 @@
     * Display list of my assets
     * @memberOf widgets/Adopta/MyAssets
     **/
-    showSelectAsssetSection: function () {
-      domClass.remove(this.selecetAssetSection, "esriCTHidden");
+    showSelectAssetSection: function () {
+      domClass.remove(this.selectAssetSection, "esriCTHidden");
       domClass.add(this.myAssetsSection, "esriCTHidden");
     },
 
@@ -216,7 +211,7 @@
           }
         }
       } else {
-        domClass.remove(this.selecetAssetSection, "esriCTHidden");
+        domClass.remove(this.selectAssetSection, "esriCTHidden");
         domClass.add(this.myAssetsSection, "esriCTHidden");
       }
     },

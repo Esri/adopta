@@ -6,7 +6,6 @@ define({
     "registeredUserLabel": "Registered User?", //Shown as label for register user link
     "emailPlaceHolderText": "Enter email address (required)", //Shown as placeholder text in email input box
     "teamPlaceHolderText": "Team (optional)", //Shown as placeholder text in teamName input box
-    "requiredText": "required",  //Shown as placeholder text in additional fields text box if the field is configured as 'required'
     "invalidConfigurationMessage": "Invalid Configuration", //Shown as message in widget panel if configuration is not valid
     "streetAddressLabel": "Street Address", //Shown as title for reverse geocoded address section
     "streetAddressNotFoundText": "No address found", //Show in reverse geocoded address section if address is not found at selected location
@@ -17,8 +16,6 @@ define({
     "nickNameUpdateButtonLabel": "Update", //Shown as label for nickName update button
     "actionFailedMsg": "Unable to perform status ${actionName}", // Shown as meesage in popup when action failed.
     "invalidAppLinkMsg": "Invalid Application link.", //Shown as message in popup if the invalid url parameters are passed
-    "yesButtonLabel": "Yes", //Shown as label for yes button in confirmation box
-    "noButtonLabel": "No", //Shown as label for no button in confirmation box
     "noOutputParameterMsg":"Model did not return a response, please ensure there is an output parameter", //Shown as error message in popup when no output parameters are returned from GP service
     "assetConfirmationMsg":"Do you want to save and adopt this asset?" // Shown as message when user wants to create and adopt new asset
   }),
