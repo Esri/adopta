@@ -68,10 +68,8 @@ from uuid import uuid4
 
 import datetime
 from datetime import timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from smtplib import SMTP
 import arcpy
+import send_email
 #------------------------------------------------------------------------------#
 # used in login email when no assets are adopted
 no_assets_message = "No assets adopted yet"
@@ -106,53 +104,7 @@ url_userid = arcpy.GetParameterAsText(26)
 url_usertoken = arcpy.GetParameterAsText(27)
 
 ########################################################################
-class fieldReplace():
-    _name = ""
-    _length = 0
-    def __init__(self, name, length = 0, **kwargs):
-        self._name = name
-        self._length = length
 
-    @property
-    def name(self):
-        return self._name
-    @property
-    def length(self):
-        return self._length
-class describeReplace():
-    _hasGlobalID = True
-    _globalIdField = "GlobalID"
-    _isVersioned = False
-    _path = ""
-    _fields = []
-    def __init__(self):
-
-        import os
-        self._path, name = os.path.split(user_table)
-        self._fields.append(fieldReplace(**{"name":'OBJECTID',"length":"4"}))
-        self._fields.append(fieldReplace(**{"name":'EMAIL',"length":"70"}))
-        self._fields.append(fieldReplace(**{"name":'TEAM',"length":"35"}))
-        self._fields.append(fieldReplace(**{"name":'FIRSTNAME',"length":"35"}))
-        self._fields.append(fieldReplace(**{"name":'LASTNAME',"length":"35"}))
-        self._fields.append(fieldReplace(**{"name":'GlobalID',"length":"0"}))
-        self._fields.append(fieldReplace(**{"name":'USERTOKEN',"length":"0"}))
-        self._fields.append(fieldReplace(**{"name":'TOKENDATE',"length":"0"}))
-
-    @property
-    def hasGlobalID(self):
-        return self._hasGlobalID
-    @property
-    def globalIDFieldName(self):
-        return self._globalIdField
-    @property
-    def isVersioned(self):
-        return self._isVersioned
-    @property
-    def path(self):
-        return self._path
-    @property
-    def fields(self):
-        return self._fields
 def send_msg(message, messagetype="message",):
     """ output messages to stdout as well as arcpy """
     if messagetype.lower() == "message":
@@ -171,7 +123,7 @@ def send_msg(message, messagetype="message",):
         # set the result_output parameter in case of success
         out_message = {"status":"Success", "description":message}
         arcpy.SetParameterAsText(28, out_message)
-    print message
+    print(message)
 
 def validate_user_table(userTableDescribe):
     """ validates user table schema requirements """
@@ -482,8 +434,8 @@ def add_user(userTableDescribe):
         edit.startOperation()
         # insert row for new user
         with arcpy.da.InsertCursor(in_table=user_table,
-                                   field_names=fields.keys()) as cursor:
-            oid = cursor.insertRow(fields.values())
+                                   field_names=list(fields.keys())) as cursor:
+            oid = cursor.insertRow(list(fields.values()))
         send_msg("User: {0} added with oid: {1}".format(input_user_email, oid))
         # return userid-globalid and usertoken-guid
         userid, usertoken = get_userid_usertoken(userTableDescribe, input_user_email)
@@ -521,13 +473,13 @@ def generate_login_link(userid, usertoken):
     # generate appurl
     if len(adopted_assetid) > 0:
         # assign asset to user who tried to adopt before signing up or logging in
-        template = "<a href={0}userid={1}&usertoken={2}&assign={3}>Login</a>"
+        template = "{0}userid={1}&usertoken={2}&assign={3}"
         # userid-globalid should be converted to lowercase as it is written to
         # asset layer in a guid field which converts it to lowercase
         login_link = template.format(get_base_appurl(), userid.lower(), usertoken, adopted_assetid)
         return login_link
     else:
-        template = "<a href={0}userid={1}&usertoken={2}>Login</a>"
+        template = "{0}userid={1}&usertoken={2}"
         login_link = template.format(get_base_appurl(), userid.lower(), usertoken)
         return login_link
 
@@ -608,14 +560,12 @@ def prepare_html_table(assets, userid, usertoken, actions, asset_titlefields):
 
     if len(assets) > 0:
         # start html table
-        html_table = """<table style="border: 1px solid #ccc; border-collapse: collapse;" """ \
-                     """ cellspacing="0" cellpadding="10">"""
+        html_table = "<table>"
 
         for asset in assets:
             asset_title = get_asset_title(asset, asset_titlefields)
             # add asset title table cell
-            title_template = """<tr><td style="border: 1px solid #ccc; border-collapse: collapse;" """ \
-                             """ cellspacing="0" cellpadding="10">{0}</td>"""
+            title_template = "<tr><td>{0}</td>"
             html_table = html_table + title_template.format(asset_title)
             # add action link table cells
             # link_template indexes
@@ -625,9 +575,7 @@ def prepare_html_table(assets, userid, usertoken, actions, asset_titlefields):
             # 3 - urlparam
             # 4 - objectid
             # 5 - action name
-            link_template = """<td style="border: 1px solid #ccc; border-collapse: collapse;" """ \
-                            """ cellspacing="0" cellpadding="10"> """ \
-                            """<a href={0}userid={1}&usertoken={2}&{3}={4}>{5}</a></td>"""
+            link_template = '<td><a href="{0}userid={1}&usertoken={2}&{3}={4}>{5}"</a></td>'
             for actionitem in actions:
                 # generate action links for each configured action
                 actionlink = link_template.format( \
@@ -641,6 +589,7 @@ def prepare_html_table(assets, userid, usertoken, actions, asset_titlefields):
                 html_table = html_table + " " + actionlink
             # close the table row for this asset
             html_table = html_table + " </tr>"
+        html_table = html_table + "</table>"
         return html_table
 
 def prepare_login_email(html_table, userid, usertoken):
@@ -722,38 +671,6 @@ def get_adopted_assets(asset_layer, userid, wconfig, asset_titlefields):
         send_msg("Error in getting assets adopted by user. Error: {0}".format(str(e)), "error")
         return None
 
-def send_email(email_body, email_address):
-    """ send emails to adopters """
-    msg = MIMEMultipart()
-    msg['From'] = from_address
-    msg['To'] = email_address
-    if action.lower() == "signup":
-        msg['Subject'] = signup_email_subject
-    if action.lower() in ["login", "validate"]:
-        msg['Subject'] = login_email_subject
-    # Attach the email body
-    msg.attach(MIMEText(email_body, 'html'))
-    try:
-        server = SMTP(smtp_server)
-
-        if use_tls:
-            server.starttls()
-        server.ehlo()
-        if smtp_username != "" and smtp_password != "":
-            server.esmtp_features['auth'] = 'LOGIN'
-            server.login(smtp_username, smtp_password)
-
-        # send email to all adopters
-        messagebody = msg.as_string()
-        send_msg("Sending email to {0}".format(email_address))
-        server.sendmail(from_address, email_address, messagebody)
-        server.quit()
-        return True
-
-    except Exception as e:
-        send_msg("Failure in sending email. {0}".format(str(e)), "error")
-        return False
-
 def process_signup(userTableDescribe):
 
     """ process signup operation """
@@ -767,10 +684,11 @@ def process_signup(userTableDescribe):
         if userid is None and usertoken is None:
             return
         email_body = prepare_signup_email(userid, usertoken)
-        if send_email(email_body, input_user_email):
+        try:
+            send_email.send(signup_email_subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [input_user_email])
             send_msg("Sent email", "success")
-        else:
-            return
+        except Exception as e:
+            send_msg("Failure in sending email. {0}".format(str(e)), "error")
     else:
         # an error occurred while verifying if email exists
         send_msg("Error occurred while verifying if email exists.", "error")
@@ -821,8 +739,11 @@ def process_login(userTableDescribe, email_address):
     # prepare the email body using login template
     email_body = prepare_login_email(html_table, userid, usertoken)
     # send the login email
-    if send_email(email_body, email_address):
+    try:
+        send_email.send(login_email_subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [email_address])
         send_msg("Sent email", "success")
+    except Exception as e:
+        send_msg("Failure in sending email. {0}".format(str(e)), "error")
 
 def return_unique_teamnames(userTableDescribe):
     """ return unique team names """

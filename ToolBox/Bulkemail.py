@@ -21,9 +21,6 @@ from uuid import uuid4
 from ast import literal_eval
 import datetime
 from datetime import timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from smtplib import SMTP
 try:
     # python 2
     import urlparse
@@ -37,6 +34,7 @@ from arcrest.agol import FeatureLayer
 from arcrest.common.geometry import Polygon
 from arcrest.common.filters import GeometryFilter
 import arcpy
+import send_email
 #------------------------------------------------------------------------------#
 
 # read tool input parameters
@@ -481,14 +479,12 @@ def get_asset_title(asset, asset_titlefields):
 def prepare_actionlinks(adopter, actions, asset_titlefields):
     """ Prepare html table of adopted assets """
     # start html table
-    html_table = """<table style="border: 1px solid #ccc; border-collapse: collapse;" """\
-                 """ cellspacing="0" cellpadding="10">"""
+    html_table = "<table>"
     # add row in html table for each asset
     for asset in adopter["assets"]:
         asset_title = get_asset_title(asset, asset_titlefields)
         # add asset title table cell
-        title_template = """<tr> <td style="border: 1px solid #ccc; border-collapse: collapse;" """\
-                         """ cellspacing="0" cellpadding="10">{0}</td>"""
+        title_template = "<tr><td>{0}</td>"
         html_table = html_table + title_template.format(asset_title)
         # link_template indexes
         # 0 - app url
@@ -497,9 +493,7 @@ def prepare_actionlinks(adopter, actions, asset_titlefields):
         # 3 - urlparam
         # 4 - objectid
         # 5 - action name
-        link_template = """<td style="border: 1px solid #ccc; border-collapse: collapse;" """ \
-                        """ cellspacing="0" cellpadding="10">""" \
-                        """ <a href={0}?userid={1}&usertoken={2}&{3}={4}>{5}</a></td>"""
+        link_template = '<td><a href="{0}?userid={1}&usertoken={2}&{3}={4}">{5}</a></td>'
         for action in actions:
             # generate action links for each configured action
             actionlink = link_template.format( \
@@ -513,6 +507,7 @@ def prepare_actionlinks(adopter, actions, asset_titlefields):
             html_table = html_table + actionlink
         # close the table row for this asset
         html_table = html_table + "</tr>"
+    html_table = html_table + "</table>"
     return html_table
 
 def prepare_emailbody(user, action_links):
@@ -521,17 +516,17 @@ def prepare_emailbody(user, action_links):
     # substitute the login link
     if '{{LoginLink}}' in body:
         body = body.replace('{{LoginLink}}',
-                            "<a href={0}?userid={1}&usertoken={2}>Login</a>".format( \
+                            "{0}?userid={1}&usertoken={2}".format( \
                             clean_app_url(),
                             user["user_guid"],
                             user["user_token"]))
     else:
-        send_msg("{{LoginLink}} keyword not found in email template.", "error")
+        send_msg("{{LoginLink}} keyword not found in email template.", "warning")
     # substitute the list of adopted assets
     if '{{AdoptedAssets}}' in body:
         body = body.replace('{{AdoptedAssets}}', action_links)
     else:
-        send_msg("{{AdoptedAssets}} keyword not found in email template", "error")
+        send_msg("{{AdoptedAssets}} keyword not found in email template", "warning")
     return body
 
 def get_usertoken(email_address=None):
@@ -594,36 +589,6 @@ def update_usertoken(email_address=""):
         if edit.isEditing:
             edit.stopEditing(False)
         return None
-
-def send_email(toemail, email_body):
-    """ send emails to adopters """
-    msg = MIMEMultipart()
-    msg['From'] = from_address
-    msg['To'] = toemail
-    msg['Subject'] = email_subject
-    if test_mode == "true":
-        msg['Subject'] = "Test Mode: " + email_subject
-    # Attach the email body
-    msg.attach(MIMEText(email_body, 'html'))
-    try:
-        server = SMTP(smtp_server)
-
-        if use_tls:
-            server.starttls()
-        server.ehlo()
-        if smtp_username != "" and smtp_password != "":
-            server.esmtp_features['auth'] = 'LOGIN'
-            server.login(smtp_username, smtp_password)
-
-        # send email to all adopters
-        messagebody = msg.as_string()
-        server.sendmail(from_address, toemail, messagebody)
-        server.quit()
-        return True
-
-    except Exception as e:
-        send_msg("Failure in sending email. {0}".format(str(e)), "error")
-        return False
 
 def main():
     """ main function """
@@ -696,9 +661,12 @@ def main():
                 action_links = prepare_actionlinks(user, actions, asset_titlefields)
                 # prepare email body
                 email_body = prepare_emailbody(user, action_links)
-                send_email(user["email"], email_body)
-                sent.append(user["email"])
-
+                try:
+                    send_email.send(email_subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [user["email"]])
+                    sent.append(user["email"])
+                except Exception as e:
+                    send_msg("Failure in sending email. {0}".format(str(e)), "error")
+                
         if test_mode == "false":
             # send email only to all users
             if int(token_expiry_minutes) != 0:
@@ -709,8 +677,11 @@ def main():
             action_links = prepare_actionlinks(user, actions, asset_titlefields)
             # prepare email body
             email_body = prepare_emailbody(user, action_links)
-            send_email(user["email"], email_body)
-            sent.append(user["email"])
+            try:
+                send_email.send(email_subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [user["email"]])
+                sent.append(user["email"])
+            except Exception as e:
+                send_msg("Failure in sending email. {0}".format(str(e)), "error")
 
     # set output result parameter
     if len(sent) > 0:
