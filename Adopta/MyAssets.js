@@ -61,8 +61,8 @@
           if (this.config.userDetails) {
             var queryField, i;
             queryField = new Query();
-            queryField.where = this.config.foreignKeyFieldForUserTable + " = '" +
-              this.config.userDetails[this.config.foreignKeyFieldForUserTable] + "'";
+            queryField.where = this.config.foreignKeyFieldForUserTable + " = '{" +
+              this.config.userDetails[this.config.foreignKeyFieldForUserTable] + "}'";
             queryField.returnGeometry = true;
             queryField.outFields = ["*"];
             // Query for the features with the loggedin UserID
@@ -285,8 +285,8 @@
     getMyAssets: function (performActionsFromURL) {
       var queryField;
       queryField = new Query();
-      queryField.where = this.config.foreignKeyFieldForUserTable + " = '" +
-        this.config.userDetails[this.config.foreignKeyFieldForUserTable] + "'";
+      queryField.where = this.config.foreignKeyFieldForUserTable + " = '{" +
+        this.config.userDetails[this.config.foreignKeyFieldForUserTable] + "}'";
       queryField.returnGeometry = true;
       queryField.outFields = ["*"];
       // Query for the features with the loggedin UserID

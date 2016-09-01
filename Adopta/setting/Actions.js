@@ -554,6 +554,15 @@ define([
         } else if (fieldObj.type === "esriFieldTypeDate") {
           actionsArray.splice(2, 1);
         }
+        if (!fieldObj.nullable) {
+          //Loop through the actions array to check for nullable fields
+          array.some(actionsArray, lang.hitch(this, function (currentAction, index) {
+            if (currentAction.value === "Clear") {
+              actionsArray.splice(index, 1);
+              return true;
+            }
+          }));
+        }
         return actionsArray;
       },
 

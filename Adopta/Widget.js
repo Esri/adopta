@@ -240,7 +240,7 @@ function (
       }
       this._assetLayer.queryIds(query, lang.hitch(this, function (features) {
         //on map click create asset only if any other asset does not exist in near by area
-        if (features.length === 0) {
+        if (!features || (features.hasOwnProperty("length") && features.length === 0)) {
           if (this.config.addAssetConfirmationMsg.indexOf('layerName') !== -1) {
             newMsg = string.substitute(this.config.addAssetConfirmationMsg,
               { layerName: this._assetLayer.name });

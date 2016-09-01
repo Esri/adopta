@@ -575,7 +575,7 @@ def prepare_html_table(assets, userid, usertoken, actions, asset_titlefields):
             # 3 - urlparam
             # 4 - objectid
             # 5 - action name
-            link_template = '<td><a href="{0}userid={1}&usertoken={2}&{3}={4}>{5}"</a></td>'
+            link_template = '<td><a href="{0}userid={1}&usertoken={2}&{3}={4}">{5}</a></td>'
             for actionitem in actions:
                 # generate action links for each configured action
                 actionlink = link_template.format( \
@@ -658,8 +658,8 @@ def get_adopted_assets(asset_layer, userid, wconfig, asset_titlefields):
         fields.extend(asset_titlefields["popupfields"])
         # get unique set of fields
         out_fields = ",".join(set(fields))
-        # globalid fields are stored in uppercase
-        userid = userid.upper()
+        # query guid field in asset layer using braces
+        userid = "{"+userid+"}"
         where_clause = "{0}='{1}'".format(key_field, userid)
         assets = asset_layer.query(where=where_clause,
                                    out_fields=out_fields,
