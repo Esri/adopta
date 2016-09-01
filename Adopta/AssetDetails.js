@@ -124,10 +124,15 @@
       relatedGUID = selectedFeature.attributes[this.config.foreignKeyFieldForUserTable];
 
       if (relatedGUID && relatedGUID !== null && lang.trim(relatedGUID) !== "") {
+        //Check for curly braces
+        if (relatedGUID.indexOf("{") === -1) {
+          relatedGUID = "{" + relatedGUID + "}";
+        }
         isAssetAdopted = true;
       }
-      if (this.config.userDetails && isAssetAdopted && relatedGUID === this.config.userDetails[
-        this.config.foreignKeyFieldForUserTable]) {
+      if (this.config.userDetails && isAssetAdopted && relatedGUID.toLowerCase() ===
+        "{" + this.config.userDetails[this.config.foreignKeyFieldForUserTable]
+        .toLowerCase() + "}") {
         isAssetAdoptedByLoggedInUser = true;
       }
       return {
@@ -327,8 +332,8 @@
     */
     _adoptAsset: function (selectedFeature) {
       //Add users guid into asset to identify which asset belongs to user
-      selectedFeature.attributes[this.config.foreignKeyFieldForUserTable] = this.config
-        .userDetails[this.config.foreignKeyFieldForUserTable];
+      selectedFeature.attributes[this.config.foreignKeyFieldForUserTable] = "{" + this.config
+        .userDetails[this.config.foreignKeyFieldForUserTable] + "}";
       this.updateFieldsForAction(this.config.actions.assign.name, selectedFeature, true);
     },
 
@@ -445,8 +450,8 @@
         fieldsToUpdate = this.config.actions.unAssign.fieldsToUpdate;
       } else if (actionName === this.config.actions.assign.name) {
         //Add related GUI field value from respective field
-        this.config.actions.assign.fieldsToUpdate[0].value = this.config
-          .userDetails[this.config.foreignKeyFieldForUserTable];
+        this.config.actions.assign.fieldsToUpdate[0].value = "{" + this.config
+          .userDetails[this.config.foreignKeyFieldForUserTable] + "}";
         //check if action is assign choose its fields to update and set adopt action flag
         fieldsToUpdate = this.config.actions.assign.fieldsToUpdate;
       }

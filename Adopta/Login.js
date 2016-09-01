@@ -413,7 +413,8 @@
         if (response && response.length > 0 &&
           response[0].value.status.toLowerCase() === "success" &&
           response[0].value.description &&
-          response[0].value.description.teamfield) {
+          response[0].value.description.teamfield &&
+          response[0].value.description.teamfield.hasOwnProperty("name")) {
           this.config.teamField = response[0].value.description.teamfield;
           //push selected attributes value of all the features into an array
           array.forEach(response[0].value.description.features, lang.hitch(this,
