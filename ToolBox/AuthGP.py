@@ -752,7 +752,6 @@ def return_unique_teamnames(userTableDescribe):
     # if no team field configured, send empty response
 
     if len(user_team_field) == 0:
-        team_result["teamfield"] = None
         send_msg(team_result, "success")
         return
     # if team field configured, send unique names
