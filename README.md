@@ -21,7 +21,7 @@ You can start using the Adopta widget now by adding the "Adopta" folder to 2D wi
 
 **Start now using your own services, you'll want to publish a Adopta feature service and geoprocessing service when developing. The help below will walk you through this process**
 
-For more information on requirements and publication steps, see [Parcel Drafter ](http://links.esri.com/localgovernment/help/adopta/) help.
+For more information on requirements and publication steps, see [Adopta ](http://links.esri.com/localgovernment/help/adopta/) help.
 
 ### Experience
 
