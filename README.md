@@ -74,8 +74,3 @@ A copy of the license is available in the repository's
 
 [](Esri Tags: ArcGISSolutions Local-Government Local Government Adopta Adopt a)
 [](Esri Language: JavaScript)
-
-
-
-
-
