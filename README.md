@@ -2,7 +2,7 @@
 
 AdoptA is is a Web AppBuilder (Developer Edition) custom widget and ArcGIS Server configuration designed to support the public adoption and maintenance of assets.
 
-[![Image of Adopta application](Adopta.png "Adopta application")](http://links.esri.com/localgovernment/tryit/adoptacatchbasin/)
+[![Image of Adopta application](adopta.png "Adopta application")](http://links.esri.com/localgovernment/tryit/adoptacatchbasin/)
 
 [Try the Adopt a Hydrant application](http://links.esri.com/localgovernment/tryit/apdotahydrant/)
 [Try the Adopt a Catch Basin application](http://links.esri.com/localgovernment/tryit/adoptacatchbasin/)
