@@ -72,8 +72,8 @@ if __name__ == "__main__":
     all_addresses = to_addresses + cc_addresses + bcc_addresses
 
     try:
-        with EmailServer(smtp_server, smtp_username, smtp_password, use_tls) as smtp_server:
-            smtp_server.send(from_address, reply_to, to_addresses, cc_addresses, bcc_addresses, subject, email_body)
+        with EmailServer(smtp_server, smtp_username, smtp_password, use_tls) as email_server:
+            email_server.send(from_address, reply_to, to_addresses, cc_addresses, bcc_addresses, subject, email_body)
         _set_result(11, True)
     except Exception as e:
         _add_warning("Failed to send e-mail. {0}".format(str(e)))
