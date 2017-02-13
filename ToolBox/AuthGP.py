@@ -95,7 +95,7 @@ login_template = arcpy.GetParameterAsText(17)
 smtp_server = arcpy.GetParameterAsText(18)
 smtp_username = arcpy.GetParameterAsText(19)
 smtp_password = arcpy.GetParameterAsText(20)
-use_tls = arcpy.GetParameterAsText(21)
+use_tls = arcpy.GetParameter(21)
 signup_fields = arcpy.GetParameterAsText(22)
 asset_popup_config = arcpy.GetParameterAsText(23)
 widget_config = arcpy.GetParameterAsText(24)
@@ -685,7 +685,8 @@ def process_signup(userTableDescribe):
             return
         email_body = prepare_signup_email(userid, usertoken)
         try:
-            send_email.send(signup_email_subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [input_user_email])
+            with send_email.EmailServer(smtp_server, smtp_username, smtp_password, use_tls) as email_server:
+                email_server.send(from_address=from_address, to_addresses=[input_user_email], subject=signup_email_subject, email_body=email_body)
             send_msg("Sent email", "success")
         except Exception as e:
             send_msg("Failure in sending email. {0}".format(str(e)), "error")
@@ -740,7 +741,8 @@ def process_login(userTableDescribe, email_address):
     email_body = prepare_login_email(html_table, userid, usertoken)
     # send the login email
     try:
-        send_email.send(login_email_subject, email_body, from_address, smtp_server, smtp_username, smtp_password, use_tls, [email_address])
+        with send_email.EmailServer(smtp_server, smtp_username, smtp_password, use_tls) as email_server:
+            email_server.send(from_address=from_address, to_addresses=[email_address], subject=login_email_subject, email_body=email_body)
         send_msg("Sent email", "success")
     except Exception as e:
         send_msg("Failure in sending email. {0}".format(str(e)), "error")
