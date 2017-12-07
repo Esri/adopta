@@ -1,4 +1,4 @@
-# AdoptA
+# adopta
 
 AdoptA is is a Web AppBuilder (Developer Edition) custom widget and ArcGIS Server configuration designed to support the public adoption and maintenance of assets.
 
