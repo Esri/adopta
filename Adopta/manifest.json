@@ -6,7 +6,7 @@
   "version": "2.1",
   "wabVersion": "2.1",
   "author": "Esri Inc.",
-  "description": "Adopta",
+  "description": "AdoptA is is a Web AppBuilder (Developer Edition) custom widget and ArcGIS Server configuration designed to support the public adoption and maintenance of assets.",
   "copyright": "Copyright 2016 Esri Inc.",
   "license": "http://links.esri.com/solutions/license",
   "properties": {
